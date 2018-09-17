@@ -1,0 +1,57 @@
+#version 330 core
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 vertexPosition_modelspace;
+layout(location = 1) in vec2 vertexUV;
+layout(location = 2) in uint tW;
+
+out vec3 UVW;
+  
+// Values that stay constant for the whole mesh.
+uniform mat4 MVP;
+  
+void main() {
+  int c = gl_VertexID % 6; //with this we don't need to store uv-coordinates for blocks
+  //we just need to make sure this shader is only used on blocks
+
+  // Output position of the vertex, in clip space : MVP * position
+  gl_Position =  MVP * vec4(vertexPosition_modelspace,1);
+
+  // UV of the vertex. No special space for this one.
+  //UV = vertexUV;
+
+  if(c == 0) {
+    UVW.x=0.0;
+    UVW.y=0.0;
+  }
+  if(c == 1) {
+    UVW.x=1.0;
+    UVW.y=0.0;
+  }
+  if(c == 2) {
+    UVW.x=1.0;
+    UVW.y=1.0;
+  }
+  if(c == 3) {
+    UVW.x=0.0;
+    UVW.y=0.0;
+  }
+  if(c == 4) {
+    UVW.x=1.0;
+    UVW.y=1.0;
+  }
+  if(c == 5) {
+    UVW.x=0.0;
+    UVW.y=1.0;
+  }
+  UVW.z = float(tW);
+
+  //UV = uvss;
+  
+  //if(c < 5) {
+  //  c++;
+  //} else {
+  //  c = 0;
+  //}
+}
+
