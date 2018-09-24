@@ -5,6 +5,7 @@
 
 #define BLOCK_OPAQUE 0b1
 
+
 typedef struct s_block
 {
     unsigned int id;

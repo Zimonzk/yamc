@@ -11,6 +11,6 @@
 #include "dndndefs.h"
 #include "chunk.h"
 
-void generate_chunk(chunk* chu);
+void generate_chunk(chunk* chu, struct osn_context* ctn);
 
 #endif // WORLDGEN_H_INCLUDED

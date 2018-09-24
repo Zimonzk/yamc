@@ -2,10 +2,11 @@
 #define RENDERING_H_INCLUDED
 
 #include "chunk.h"
+#include <stdint.h>
 
 void render_init();
-void render();
-void render_chunk(chunk* cchunk);
+void update_mesh(int x, int z);
+void render_looper();
 
 void update_model();
 void update_view();

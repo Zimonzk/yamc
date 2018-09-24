@@ -33,136 +33,111 @@ int debug = 1;
  * and quits the application */
 void sdldie(const char *msg)
 {
-    SDL_Log("%s: %s\n", msg, SDL_GetError());
-    SDL_Quit();
-    exit(1);
+	SDL_Log("%s: %s\n", msg, SDL_GetError());
+	SDL_Quit();
+	exit(1);
 }
 
 chunk world[(2*CHUNK_LOADING_RANGE)+1][(2*CHUNK_LOADING_RANGE)+1] = {};
-chunk* neig[4] = {0,0,0,0};
-
-/*for simplex noise*/
-struct osn_context* ctn;
+chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
+float looked_at[3];
 
 /* Our program's entry point */
 int main(int argc, char *argv[])
 {
-    char stop = 0;
-    SDL_Event event;
+	char stop = 0;
+	SDL_Event event;
 
-    Uint32 lastticks = 0, thisticks = 0, difftime = 0;
-    Uint32 fpsticks = 0, fpslastticks = 0;
-    float fps = 0;
-    long frame_num = 0;
+	Uint32 lastticks = 0, thisticks = 0, difftime = 0;
+	Uint32 fpsticks = 0, fpslastticks = 0;
+	float fps = 0;
+	long frame_num = 0;
 
-    SDL_Window *mainwindow; /* Our window handle */
-    SDL_GLContext maincontext; /* Our opengl context handle */
+	SDL_Window *mainwindow; /* Our window handle */
+	SDL_GLContext maincontext; /* Our opengl context handle */
 
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
-        sdldie("Unable to initialize SDL"); /* Or die on error */
-    }
-    SDL_Log("SDL initialized");
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
+		sdldie("Unable to initialize SDL"); /* Or die on error */
+	}
+	SDL_Log("SDL initialized");
 
-    /* Request opengl 3.2 context.
-     * SDL doesn't have the ability to choose which profile at this time of writing,
-     * but it should default to the core profile */
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	/* Request opengl 3.2 context.
+	 * SDL doesn't have the ability to choose which profile at this time of writing,
+	 * but it should default to the core profile */
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    /* Turn on double buffering with a 24bit Z buffer.
-     * You may need to change this to 16 or 32 for your system */
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	/* Turn on double buffering with a 24bit Z buffer.
+	 * You may need to change this to 16 or 32 for your system */
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    /* Create our window centered at 512x512 resolution */
-    mainwindow = SDL_CreateWindow(PROGRAM_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-    if (!mainwindow) /* Die if creation failed */
-        sdldie("Unable to create window");
+	/* Create our window centered at 512x512 resolution */
+	mainwindow = SDL_CreateWindow(PROGRAM_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+	if (!mainwindow) /* Die if creation failed */
+		sdldie("Unable to create window");
 
-    /* Create our opengl context and attach it to our window */
-    maincontext = SDL_GL_CreateContext(mainwindow);
+	/* Create our opengl context and attach it to our window */
+	maincontext = SDL_GL_CreateContext(mainwindow);
 
-    memset(world[0][0].data, 0, CHUNK_LIM_HOR*CHUNK_LIM_HOR*CHUNK_LIM_VER*sizeof(block));
-    /*world[0][0].data[0][0][1].id = 2;
-    world[0][0].data[0][0][1].properties = BLOCK_OPAQUE;
-    world[0][0].data[0][0][0].id = 2;
-    world[0][0].data[0][0][0].properties = BLOCK_OPAQUE;
-    world[0][0].data[0][1][0].id = 2;
-    world[0][0].data[0][1][0].properties = BLOCK_OPAQUE;
-    world[0][0].data[1][0][0].id = 2;
-    world[0][0].data[1][0][0].properties = BLOCK_OPAQUE;*/
-    //fillchunktest(&world[0][0]);
+	render_init();
 
-    open_simplex_noise(TEST_SEED, &ctn);
-    for(int x = 0; x < ((2*CHUNK_LOADING_RANGE) + 1); x++) {
-        for(int z = 0; z < ((2*CHUNK_LOADING_RANGE) + 1); z++) {
-            memset(world[x][z].data, 0, CHUNK_LIM_HOR*CHUNK_LIM_HOR*CHUNK_LIM_VER*sizeof(block));
-            world[x][z].offset_X = x;
-            world[x][z].offset_Z = z;
-            generate_chunk(&world[x][z]);
-        }
-    }
+	SDL_Log("Entering main loop");
 
-    SDL_Log("#Triangles@world[0][0]: %i", determine_mescha_size(&world[0][0], neig));
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 
-    render_init();
+	/* main loop */
+	while(!stop) {
+		while(SDL_PollEvent(&event)) {
+			switch(event.type) {
+				case SDL_KEYDOWN:
+				case SDL_KEYUP:
+					handle_keyboard_event(&event.key);
+					break;
+				case SDL_QUIT:
+					stop = 1;
+					break;
+				case SDL_MOUSEMOTION:
+					handle_mousemotion_event(&event);
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					world[0][0].data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].id = 0;
+					world[0][0].data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].properties = 0;
+					update_mesh(0, 0);
+					SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+					SDL_Log("~~~~~~ %i|%i|%i", (int)looked_at[0], (int)looked_at[1], (int)looked_at[2]);
+					break;
+				default:
+					break;
+			}
+		}
 
-    SDL_Log("Entering main loop");
+		move_player(difftime);
 
-    SDL_SetRelativeMouseMode(SDL_TRUE);
+		render_looper();
 
-    /* main loop */
-    while(!stop) {
-        while(SDL_PollEvent(&event)) {
-          switch(event.type) {
-          case SDL_KEYDOWN:
-          case SDL_KEYUP:
-            handle_keyboard_event(&event.key);
-            break;
-          case SDL_QUIT:
-            stop = 1;
-            break;
-          case SDL_MOUSEMOTION:
-            handle_mousemotion_event(&event);
-            break;
-          default:
-            break;
-          }
-        }
+		/* buffer swap*/
+		SDL_GL_SwapWindow(mainwindow);
+		thisticks = SDL_GetTicks();
+		difftime = thisticks - lastticks;
+		lastticks = thisticks;
 
-        move_player(difftime);
+		if(!(frame_num % 1000)) {
+			fpsticks = SDL_GetTicks();
+			fps = 1000000.0/(fpsticks - fpslastticks);
+			SDL_Log("FPS: %f\n", fps);
+			fpslastticks = fpsticks;
+		}
+		frame_num++;
+	}
 
-        /*for(int x = 0; x < ((2*CHUNK_LOADING_RANGE) + 1); x++) {
-            for(int z = 0; z < ((2*CHUNK_LOADING_RANGE) + 1); z++) {
-                render_chunk(&(world[x][z]));
-                //SDL_Log("rendered chunk");
-            }
-        }*/
-        render_chunk(&(world[0][0]));
-        //render_chunk(&(world[1][1]));
+	/* Delete our opengl context, destroy our window, and shutdown SDL */
+	SDL_GL_DeleteContext(maincontext);
+	SDL_DestroyWindow(mainwindow);
+	SDL_Quit();
 
-        /* buffer swap*/
-        SDL_GL_SwapWindow(mainwindow);
-        thisticks = SDL_GetTicks();
-        difftime = thisticks - lastticks;
-        lastticks = thisticks;
-
-        if(!(frame_num % 1000)) {
-            fpsticks = SDL_GetTicks();
-            fps = 1000000.0/(fpsticks - fpslastticks);
-            SDL_Log("FPS: %f\n", fps);
-            fpslastticks = fpsticks;
-        }
-        frame_num++;
-    }
-
-    /* Delete our opengl context, destroy our window, and shutdown SDL */
-    SDL_GL_DeleteContext(maincontext);
-    SDL_DestroyWindow(mainwindow);
-    SDL_Quit();
-
-    return 0;
+	return 0;
 }

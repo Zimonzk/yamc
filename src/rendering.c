@@ -17,10 +17,14 @@
 #include "input.h"
 #include "chunk.h"
 #include "player.h"
+#include "worldgen.h"
+#include "open-simplex-noise.h"
+#include "SOIL.h"
 
 #define NUMVERT 36
 
 extern long player_chunk_offset[2];
+float looked_at[3];
 
 // An array of 3 vectors which represents 3 vertices
 static const GLfloat g_vertex_buffer_data[] = {
@@ -128,7 +132,51 @@ static const GLfloat g_uv_buffer_data[] = {
 	0, 1
 };
 
-static GLfloat model_scale = 0.50;
+static const GLfloat block_outline_data[] = {
+	1.0f, 1.0f, 1.0f,
+	1.0f, 0.0f, 1.0f,
+	0.0f, 0.0f, 1.0f,
+	0.0f, 1.0f, 1.0f,
+
+	1.0f, 1.0f, 0.0f,
+	1.0f, 0.0f, 0.0f,
+	0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f, 0.0f,
+
+	1.0f, 1.0f, 1.0f,
+	1.0f, 1.0f, 0.0f,
+
+	1.0f, 0.0f, 1.0f,
+	1.0f, 0.0f, 0.0f,
+
+	0.0f, 0.0f, 1.0f,
+	0.0f, 0.0f, 0.0f,
+
+	0.0f, 1.0f, 1.0f,
+	0.0f, 1.0f, 0.0f,
+};
+
+static const GLfloat crosshair_data[] = {
+	-1, -1,
+	1, -1,
+	1, 1,
+
+	-1, -1,
+	1, 1,
+	-1, 1
+};
+
+static const GLfloat square2D_data[] = {
+	-0.5, -0.5,
+	0.5, -0.5,
+	0.5, 0.5,
+
+	-0.5, -0.5,
+	0.5, 0.5,
+	-0.5, 0.5
+};
+
+static GLfloat model_scale = /*0.50*/1.0f;
 static GLfloat model_rotation_angle = 0.0;
 static float model_rotation_axis[3] = {1, 0, 0};
 static float model_position[3] = {0.0, 0.0, 0.0};
@@ -139,44 +187,94 @@ static float fovDeg = 45.0;
 
 static GLuint VertexArrayID; /* vao */
 static GLuint programID; /* shader */
+static GLuint programID_gui;
 static GLuint mvpID;
 static GLuint texture;
 static GLuint textureSamplerID;
+static GLuint textureSamplerID_gui;
+static GLuint screen_dimens_id_gui;
+static GLuint scale_id_gui;
+static GLuint offset_id_gui;
+static GLuint center_id_gui;
+static GLuint textureID_crosshair;
+static GLuint textureID_hotbar;
 static GLuint texture2;
 // This will identify our vertex buffer
 static GLuint vertexbuffer;
+static GLuint vertexbuffer_gui;
+static GLuint vertexbuffer_outline;
 static GLuint uvbuffer;
+static GLuint texibuffer;
+static Uint32 numTriangles;
 
 static float mvp[4][4] = {}; /* columns, rows */
 static float model[4][4] = {};
 static float view[4][4] = {};
 static float projection[4][4] = {};
 
-static Uint32 numTriangles;
-
-static GLuint texibuffer;
 
 extern chunk world[(2*CHUNK_LOADING_RANGE)+1][(2*CHUNK_LOADING_RANGE)+1];
 extern chunk* neig[4];
 
+struct mesh
+{
+	GLuint vertexbuffer;
+	GLuint texibuffer;
+	Uint32 num_triangles;
+};
+
+static struct mesh meshes[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
+static unsigned short meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
+
 
 void render_init()
-{
+{	
+	/*for simplex noise*/
+	struct osn_context* ctn;
+
+	/*generate initial chunks*/
+	open_simplex_noise(TEST_SEED, &ctn);
+	for(int x = 0; x < ((2*CHUNK_LOADING_RANGE) + 1); x++) {
+		for(int z = 0; z < ((2*CHUNK_LOADING_RANGE) + 1); z++) {
+			memset(world[x][z].data, 0, CHUNK_LIM_HOR*CHUNK_LIM_HOR*CHUNK_LIM_VER*sizeof(block));
+			world[x][z].offset_X = x;
+			world[x][z].offset_Z = z;
+			generate_chunk(&world[x][z], ctn);
+		}
+	}
+
+	SDL_Log("#Triangles@world[0][0]: %i", determine_mescha_size(&world[0][0], neig));
 	/* init glew */
 	glewExperimental = GL_TRUE;
 	glewInit();
 
 	/* This makes our buffer swap syncronized with the monitor's vertical refresh */
-	SDL_GL_SetSwapInterval(0);
+	SDL_GL_SetSwapInterval(1);
 
 
-	// Generate 1 buffer, put the resulting identifier in vertexbuffer
-	glGenBuffers(1, &vertexbuffer);
+	for(int x = 0; x < (2*CHUNK_LOADING_RANGE-1); x++) {
+		for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
+			SDL_Log("generating mesh of chunk [%i][%i]", x, z);
+			// Generate 1 buffer, put the resulting identifier in vertexbuffer
+			glGenBuffers(1, &meshes[x][z].vertexbuffer);
+
+			glGenBuffers(1, &texibuffer);
+			SDL_Log("NEIG: %p, %p, %p, %p", neig[0], neig[1], neig[2], neig[3]);
+			meshes[x][z].num_triangles = generate_mescha(&world[x][z],
+					neig, meshes[x][z].vertexbuffer, meshes[x][z].texibuffer);
+		}
+	}
+
+	glGenBuffers(1, &vertexbuffer_gui);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_gui);
+	// Give our vertices to OpenGL.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(crosshair_data), crosshair_data, GL_STATIC_DRAW);
 
 
-	glGenBuffers(1, &texibuffer);
-	numTriangles = generate_mescha(&world[0][0], neig, vertexbuffer, texibuffer);
-
+	glGenBuffers(1, &vertexbuffer_outline);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_outline);
+	// Give our vertices to OpenGL.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(block_outline_data), block_outline_data, GL_STATIC_DRAW);
 
 	// Create one OpenGL texture
 	GLuint textureID;
@@ -185,6 +283,16 @@ void render_init()
 	// Create one OpenGL texture
 	/*texture = */loadBMP_custom("textures/blocks/side.bmp", textureID, 1);
 	/*texture2 = */loadBMP_custom("textures/blocks/top.bmp", textureID, 2);
+	//textureID_crosshair = load_bmp_gui("textures/ui/crosshair.bmp");
+	textureID_crosshair = SOIL_load_OGL_texture("textures/ui/crosshair.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+	SDL_Log("TX: %u", textureID_crosshair);
+	glBindTexture(GL_TEXTURE_2D, textureID_crosshair);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	textureID_hotbar = SOIL_load_OGL_texture("textures/ui/hotbar.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+	glBindTexture(GL_TEXTURE_2D, textureID_hotbar);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 
 	// Enable depth test
@@ -205,23 +313,33 @@ void render_init()
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
-
-	/*glActiveTexture(GL_TEXTURE1);
-	  glBindTexture(GL_TEXTURE_2D, texture2);*/
+	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 
 
 	programID = LoadShaders("shaders/SimpleVertexShader.vertexshader", "shaders/SimpleFragmentShader.fragmentshader");
-	glUseProgram(programID);
+	programID_gui = LoadShaders("shaders/GUI_Vertexshader.vertexshader", "shaders/GUI_Fragmentshader.fragmentshader");
 
 	// Get a handle for our "myTextureSampler" uniform
 	textureSamplerID = glGetUniformLocation(programID, "my_sampler");
-	SDL_Log("sampler: %i", textureSamplerID);
+	SDL_Log("sampler: %u", textureSamplerID);
+
+	textureSamplerID_gui = glGetUniformLocation(programID_gui, "my_sampler");
+	SDL_Log("sampler_gui: %u", textureSamplerID_gui);
+	screen_dimens_id_gui = glGetUniformLocation(programID_gui, "screen_dimens");
+	scale_id_gui = glGetUniformLocation(programID_gui, "scale");
+	offset_id_gui = glGetUniformLocation(programID_gui, "offset");
+	center_id_gui = glGetUniformLocation(programID_gui, "center");
 
 	// Get a handle for our "MVP" uniform
 	// Only during the initialisation
 	mvpID = glGetUniformLocation(programID, "MVP");
 
 	update_projection();
+}
+
+void update_mesh(int x, int z) {
+	meshes[x][z].num_triangles = generate_mescha(&world[x][z], 
+			neig, meshes[x][z].vertexbuffer, meshes[x][z].texibuffer);
 }
 
 void update_mvp()
@@ -237,7 +355,6 @@ void update_mvp()
 
 void update_model()
 {
-	get_player_pos(camera_position);
 	float model_translation_mat[4][4] = {
 		{1,0,0,0},
 		{0,1,0,0},
@@ -277,6 +394,7 @@ void update_model()
 void update_view()
 {
 	float help0[4][4] = {};
+	get_player_pos(camera_position);
 	get_player_ori(camera_center);
 	get_player_right(help0);
 	vec3_cross(help0, camera_center, up_vector);
@@ -292,27 +410,89 @@ void update_view()
 
 void update_projection()
 {
-	perspectiveRH((fovDeg * (float)M_PI)/180.0, 4.0/3.0, 0.1, 100.0, projection); /*now we should have a projection matrix*/
+	perspectiveRH((fovDeg * (float)M_PI)/180.0, 4.0/3.0, 0.1, 10000.0, projection); /*now we should have a projection matrix*/
 }
 
-void render()
-{
-
-}
-
-void render_chunk(chunk* cchunk)
+void render_looper()
 {
 	//TODO
-	int x = 0, y = 0, z = 0;
+	int x1 = 0, y1 = 0, z1 = 0;
 	int i;
 	float playerpos[3];
 
 	get_player_pos(playerpos);
 
+	glUseProgram(programID);
+
+	// Clear the screen
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	/*block/terrain rendering*/
 	update_view();
 
+	for(int x = 0; x < (2*CHUNK_LOADING_RANGE-1); x++) {
+		for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
+			glEnableVertexAttribArray(0);
+			glBindBuffer(GL_ARRAY_BUFFER, meshes[x][z].vertexbuffer);
+			glVertexAttribPointer(
+					0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+					3,                  // size
+					GL_FLOAT,           // type
+					GL_FALSE,           // normalized?
+					0,                  // stride
+					(void*)0            // array buffer offset
+					);
+
+
+			glEnableVertexAttribArray(2);
+			glBindBuffer(GL_ARRAY_BUFFER, meshes[x][z].texibuffer);
+			glVertexAttribPointer(
+					2,                  
+					1, 
+					GL_UNSIGNED_INT,
+					GL_FALSE,
+					0, 
+					(void*)0 
+					);
+			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * (world[x][z].offset_X - player_chunk_offset[0]);
+			model_position[1] = y1 - playerpos[1];
+			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale * (world[x][z].offset_Z - player_chunk_offset[1]);
+			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
+
+			update_model();
+			update_mvp();
+
+			//single texture
+			glUniform1i(textureSamplerID, 0);
+			glDrawArrays(GL_TRIANGLES, 0, 3*meshes[x][z].num_triangles);
+
+			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(2);
+		}
+	}
+	/*block picking*/
+	{
+		GLfloat depth;
+		float mhelp0[4][4] = {}, mhelp1[4][4] = {};
+		float vcenter[4] = {0.0f, 0.0f, 0.0f, 1.0f}, vresult[4] = {};
+		glReadPixels(320,  240,  1,  1,  GL_DEPTH_COMPONENT,  GL_FLOAT,  &depth);
+		//SDL_Log("Depth: %f", depth);
+		vcenter[2] = 2.0f * depth - 1.0f;
+		mult_mat4_mat4(projection, view, mhelp0);
+		inv_mat4(mhelp0, mhelp1);
+		//print_mat4(mhelp1);
+		mult_mat4_vec4(mhelp1, vcenter, vresult);
+		vresult[0] *= 1.0f / vresult[3];
+		vresult[1] *= 1.0f / vresult[3];
+		vresult[2] *= 1.0f / vresult[3];
+		vresult[3] = 1.0f;
+		vec3_add(vresult, playerpos, looked_at);
+		//SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+	}
+
+	/*selected block outline*/
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_outline);
 	glVertexAttribPointer(
 			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
 			3,                  // size
@@ -322,71 +502,45 @@ void render_chunk(chunk* cchunk)
 			(void*)0            // array buffer offset
 			);
 
-	// 2nd attribute buffer : UVs
-	//glEnableVertexAttribArray(1);
-	//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	/*glVertexAttribPointer(
-	  1,                 // attribute. No particular reason for 1, but must match the layout in the shader.
-	  2,                 // size : U+V => 2
-	  GL_FLOAT,          // type
-	  GL_FALSE,          // normalized?
-	  0,                 // stride
-	  (void*)0           // array buffer offset
-	  );*/
-
-	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, texibuffer);
-	glVertexAttribPointer(
-			2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			1,                  // size
-			GL_UNSIGNED_INT,    // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-			);
-
-	// Clear the screen
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	/*for(x=0; x<1; x++) {
-	  for(z=0; z<1; z++) {
-	  for(y=0; y<1; y++) {
-	  model_position[0] = x - playerpos[0] + 64 * (cchunk->offset_X - player_chunk_offset[0]);
-	  model_position[1] = y - playerpos[1];
-	  model_position[2] = z - playerpos[2] + 64 * (cchunk->offset_Z - player_chunk_offset[1]);
-
-	  update_model();
-	  update_mvp();
-
-	// Set our "myTextureSampler" sampler to user Texture Unit 0
-	glUniform1i(textureID, 0);
-	// Draw the triangle !
-	glDrawArrays(GL_TRIANGLES, 0, NUMVERT-12); // Starting from vertex 0; 3 vertices total -> 1 triangle
-
-	glUniform1i(textureID, 1);
-	glDrawArrays(GL_TRIANGLES, NUMVERT-12, 12);
-	}
-	}
-	}*/
-	model_position[0] = x - playerpos[0] + 64 * (cchunk->offset_X - player_chunk_offset[0]);
-	model_position[1] = y - playerpos[1];
-	model_position[2] = z - playerpos[2] + 64 * (cchunk->offset_Z - player_chunk_offset[1]);
+	model_position[0] = (int)looked_at[0] - playerpos[0];
+	model_position[1] = (int)looked_at[1] - playerpos[1];
+	model_position[2] = (int)looked_at[2] - playerpos[2];
 
 	update_model();
 	update_mvp();
 
-	/*too slow
-	  for(i=0; i < numTriangles; i+=4) {
-	  glUniform1i(textureID, 0);
-	  glDrawArrays(GL_TRIANGLES, 3*i, 6);
-	  glUniform1i(textureID, 1);
-	  glDrawArrays(GL_TRIANGLES, 3*(i+2), 6);
-	  }*/
-	//single texture
-	glUniform1i(textureSamplerID, 0);
-	glDrawArrays(GL_TRIANGLES, 0, 3*numTriangles);
+	glLineWidth(2.0f);
+
+	glDrawArrays(GL_LINE_LOOP, 0, 4);
+	glDrawArrays(GL_LINE_LOOP, 4, 4);
+	glDrawArrays(GL_LINES, 8, 8);
 
 	glDisableVertexAttribArray(0);
-	//glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
+
+	/*gui rendering*/
+	glUseProgram(programID_gui);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_gui);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(textureSamplerID_gui, 0);
+	glUniform2f(screen_dimens_id_gui, 640.0f, 480.0f);
+	glUniform2f(scale_id_gui, 24.0f, 24.0f);
+	glUniform2f(offset_id_gui, 0.0f, 0.0f);
+	glUniform2f(center_id_gui, 0.0f, 0.0f);
+	glBindTexture(GL_TEXTURE_2D, textureID_crosshair);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	/*hotbar*/
+	glUniform1i(textureSamplerID_gui, 0);
+	glUniform2f(screen_dimens_id_gui, 640.0f, 480.0f);
+	glUniform2f(scale_id_gui, 6*81.0f, 6*10.0f);
+	glUniform2f(offset_id_gui, 0.0f, -1.0f);
+	glUniform2f(center_id_gui, 0.0f, -1.0f);
+	glBindTexture(GL_TEXTURE_2D, textureID_hotbar);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDisableVertexAttribArray(0);
+	
 }

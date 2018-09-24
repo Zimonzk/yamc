@@ -1,0 +1,6 @@
+the range defines the "radius" of the area.
+that area is square shaped with a side length of 2*range-1 chunks whith the player in the middle.
+only natural numbers are allowed as ranges.
+the number of chunks included in range "r" is "n = (2*r-1)^2".
+the x and z index of the chunk that the player is insider is determined by dividing the player x or z coordinates
+respectively by the horizontal chunk size and rounding the result down.

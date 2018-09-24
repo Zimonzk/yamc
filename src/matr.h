@@ -17,4 +17,6 @@ void vec3_negate(float* vec3, float* vresult); /*  ---`´---  */
 void lookAtRH(float* vec3_eye, float* vec3_center, float* vec3_up, float mresult[][4]);
 void perspectiveRH(float fovRad, float aspectRatio, float zNear, float zFar, float mresult[][4]);
 
+void inv_mat4(float mat[4][4], float mresult[4][4]);
+
 #endif // MATR_H_INCLUDED
