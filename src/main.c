@@ -40,7 +40,7 @@ void sdldie(const char *msg)
 
 chunk world[(2*CHUNK_LOADING_RANGE)+1][(2*CHUNK_LOADING_RANGE)+1] = {};
 chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
-float looked_at[3];
+extern float looked_at[3];
 
 /* Our program's entry point */
 int main(int argc, char *argv[])

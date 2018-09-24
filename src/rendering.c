@@ -188,6 +188,7 @@ static float fovDeg = 45.0;
 static GLuint VertexArrayID; /* vao */
 static GLuint programID; /* shader */
 static GLuint programID_gui;
+static GLuint programID_outline;
 static GLuint mvpID;
 static GLuint texture;
 static GLuint textureSamplerID;
@@ -318,6 +319,7 @@ void render_init()
 
 	programID = LoadShaders("shaders/SimpleVertexShader.vertexshader", "shaders/SimpleFragmentShader.fragmentshader");
 	programID_gui = LoadShaders("shaders/GUI_Vertexshader.vertexshader", "shaders/GUI_Fragmentshader.fragmentshader");
+	programID_outline = LoadShaders("shaders/Outline_Vertexshader.vertexshader", "shaders/Outline_Fragmentshader.fragmentshader");
 
 	// Get a handle for our "myTextureSampler" uniform
 	textureSamplerID = glGetUniformLocation(programID, "my_sampler");
@@ -487,10 +489,41 @@ void render_looper()
 		vresult[2] *= 1.0f / vresult[3];
 		vresult[3] = 1.0f;
 		vec3_add(vresult, playerpos, looked_at);
+		/*TODO: add check if values are inside a loaded chunk at all
+		 * also add calculation of the actual chunk and noch just 0/0 */
+		int cx = (int)looked_at[0]/CHUNK_LIM_HOR;
+		int cz = (int)looked_at[2]/CHUNK_LIM_HOR;
+		//SDL_Log("in chunk: %i|%i", cx, cz);
+		if(((cx >= 0) && (cx < 3)) && ((cz >= 0) && (cz < 3)) && (((int)looked_at[1]  >= 0) && ((int)looked_at[1] < CHUNK_LIM_VER))) {
+			if(world[cx][cz].data[((int)looked_at[0])%CHUNK_LIM_HOR][(int)looked_at[1]][((int)looked_at[2])%CHUNK_LIM_HOR].id == 0) {
+				//find the side of the block we appear to be looking at
+				GLfloat over[3];
+				char inversion[3] = {0, 0, 0};
+				GLfloat vsmallest;
+				char nsmallest = 0;
+				for(int n = 0; n < 3; n++) {
+					over[n] = looked_at[n] - (int) looked_at[n];
+					if(over[n] > 0.5f) {
+						inversion[n] = 1;
+						over[n] = 1.0f - over[n];
+					}
+				}
+				vsmallest = over[0];
+				for(int n = 1; n < 3; n++) {
+					if(over[n] < vsmallest) {
+						vsmallest = over[n];
+						nsmallest = n;
+					}
+				}
+				looked_at[nsmallest] = ((int)looked_at[nsmallest]) + (2.0f * inversion[nsmallest] - 1.0f);
+			}
+		}
 		//SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
 	}
 
 	/*selected block outline*/
+	glUseProgram(programID_outline);
+	glDisable(GL_DEPTH_TEST);
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_outline);
 	glVertexAttribPointer(
@@ -542,5 +575,6 @@ void render_looper()
 	glBindTexture(GL_TEXTURE_2D, textureID_hotbar);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDisableVertexAttribArray(0);
-	
+
+	glEnable(GL_DEPTH_TEST);
 }
