@@ -20,6 +20,7 @@
 #include "worldgen.h"
 #include "open-simplex-noise.h"
 #include "SOIL.h"
+#include "world.h"
 
 #define NUMVERT 36
 
@@ -214,7 +215,6 @@ static float view[4][4] = {};
 static float projection[4][4] = {};
 
 
-extern chunk world[(2*CHUNK_LOADING_RANGE)+1][(2*CHUNK_LOADING_RANGE)+1];
 extern chunk* neig[4];
 
 struct mesh
@@ -230,20 +230,6 @@ static unsigned short meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE
 
 void render_init()
 {	
-	/*for simplex noise*/
-	struct osn_context* ctn;
-
-	/*generate initial chunks*/
-	open_simplex_noise(TEST_SEED, &ctn);
-	for(int x = 0; x < ((2*CHUNK_LOADING_RANGE) + 1); x++) {
-		for(int z = 0; z < ((2*CHUNK_LOADING_RANGE) + 1); z++) {
-			memset(world[x][z].data, 0, CHUNK_LIM_HOR*CHUNK_LIM_HOR*CHUNK_LIM_VER*sizeof(block));
-			world[x][z].offset_X = x;
-			world[x][z].offset_Z = z;
-			generate_chunk(&world[x][z], ctn);
-		}
-	}
-
 	SDL_Log("#Triangles@world[0][0]: %i", determine_mescha_size(&world[0][0], neig));
 	/* init glew */
 	glewExperimental = GL_TRUE;
@@ -261,7 +247,7 @@ void render_init()
 
 			glGenBuffers(1, &texibuffer);
 			SDL_Log("NEIG: %p, %p, %p, %p", neig[0], neig[1], neig[2], neig[3]);
-			meshes[x][z].num_triangles = generate_mescha(&world[x][z],
+			meshes[x][z].num_triangles = generate_mescha(world(x, z),
 					neig, meshes[x][z].vertexbuffer, meshes[x][z].texibuffer);
 		}
 	}

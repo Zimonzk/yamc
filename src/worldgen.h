@@ -7,10 +7,8 @@
 
 #include <SDL2/SDL.h>
 
-#include "open-simplex-noise.h"
-#include "dndndefs.h"
 #include "chunk.h"
 
-void generate_chunk(chunk* chu, struct osn_context* ctn);
+void generate_chunk(chunk* chu);
 
 #endif // WORLDGEN_H_INCLUDED

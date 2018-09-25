@@ -1,9 +1,16 @@
 #include "worldgen.h"
+#include "dndndefs.h"
+#include "open-simplex-noise.h"
 
-void generate_chunk(chunk* chu, struct osn_context* ctn)
+void generate_chunk(chunk* chu)
 {
     unsigned int x, y, z;
     double scale = 64.0;
+    static struct osn_context* ctn = 0;
+
+    if(ctn == 0) {
+	open_simplex_noise(TEST_SEED, &ctn);
+    }
 
     SDL_Log("Generation chunk #x,#z: [%ld, %ld].\n", chu->offset_X, chu->offset_Z);
     //open_simplex_noise(TEST_SEED, &ctn);
