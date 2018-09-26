@@ -24,6 +24,7 @@
 #include "rendering.h"
 #include "worldgen.h"
 #include "player.h"
+#include "world.h"
 
 #define NUMVERT 36
 
@@ -38,7 +39,7 @@ void sdldie(const char *msg)
 	exit(1);
 }
 
-chunk world[(2*CHUNK_LOADING_RANGE)+1][(2*CHUNK_LOADING_RANGE)+1] = {};
+
 chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
 extern float looked_at[3];
 
@@ -104,8 +105,10 @@ int main(int argc, char *argv[])
 					handle_mousemotion_event(&event);
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					world[0][0].data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].id = 0;
-					world[0][0].data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].properties = 0;
+					world((int)looked_at[0]/CHUNK_LIM_HOR, (int)looked_at[2]/CHUNK_LIM_HOR)->data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].id = 0;
+					world((int)looked_at[0]/CHUNK_LIM_HOR, (int)looked_at[2]/CHUNK_LIM_HOR)->data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].properties = 0;
+					/*TODO meshindices for translating chunk to mesh
+					 * TODO check if the chunk is loaded (has mesh)*/
 					update_mesh(0, 0);
 					SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
 					SDL_Log("~~~~~~ %i|%i|%i", (int)looked_at[0], (int)looked_at[1], (int)looked_at[2]);
