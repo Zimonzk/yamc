@@ -220,6 +220,7 @@ struct mesh
 
 static struct mesh meshes[(2*CHUNK_LOADING_RANGE-1)*(2*CHUNK_LOADING_RANGE-1)];
 static unsigned short meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
+static long meshindices_base_offset[2] = {0, 0}; /*x, z*/
 
 
 void render_init()
@@ -409,8 +410,51 @@ void render_looper()
 	int x1 = 0, y1 = 0, z1 = 0;
 	int i;
 	float playerpos[3];
+	static long last_player_chunk_offset[2] = {0, 0};
+	long curr_player_chunk_offset[2];
 
 	get_player_pos(playerpos);
+	/*TODO see if player changed chunk. if so change the displayed chunks*/
+	curr_player_chunk_offset[0] = (long)floor(playerpos[0] / CHUNK_LIM_HOR);
+	curr_player_chunk_offset[1] = (long)floor(playerpos[2] / CHUNK_LIM_HOR);
+	if((curr_player_chunk_offset[0] != last_player_chunk_offset[0]) || (curr_player_chunk_offset[1] != last_player_chunk_offset[1])) {
+		/*player changed chunk*/
+		long new_meshindices_base_offset[2];
+		long offsetchange[2];
+		unsigned short new_meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
+		new_meshindices_base_offset[0] = curr_player_chunk_offset[0] - CHUNK_LOADING_RANGE + 1;
+		new_meshindices_base_offset[1] = curr_player_chunk_offset[1] - CHUNK_LOADING_RANGE + 1;
+
+		offsetchange[0] = meshindices_base_offest[0] - new_meshindices_base_offset[0];
+		offsetchange[1] = meshindices_base_offest[1] - new_meshindices_base_offset[1];
+
+		for(int x = 0; x < CHUNK_LOADING_RANGE; x++) {
+			for(int z = 0; z < CHUNK_LOADING_RANGE; z++) {
+				if(	((x - offsetchange[0]) >= 0) && ((z - offsetchange[1]) >= 0) &&
+					(((x - offsetchange[0]) < CHUNK_LOADING_RANGE)) && (((z - offsetchange[1]) < CHUNK_LOADING_RANGE))) {
+					/*keep that mesh but remapp it*/
+					new_meshindices[x-offsetchange[0]][z-offsetchange[1]] = meshindices[x][z];
+				} else {
+					/*make new mesh*/
+					/*invert old distance from old center to get new distance from new center*/
+					new_meshindices[x + 1 - CHUNK_LOADING_RANGE][z + 1 - CHUNK_LOADING_RANGE] = meshindices[x][z];
+					update_mesh(x + 1 - CHUNK_LOADING_RANGE, z + 1 - CHUNK_LOADING_RANGE);
+				}
+			}
+		}
+
+		for(int x = 0; x < CHUNK_LOADING_RANGE; x++) {
+			for(int z = 0; z < CHUNK_LOADING_RANGE; z++) {
+				meshindices[x][z] = new_meshindices[x][z];
+			}
+		}
+
+		meshindices_base_offset[0] = new_meshindices_base_offset[0];
+		meshindices_base_offset[1] = new_meshindices_base_offset[1];
+
+		last_player_chunk_offset[0] = curr_player_chunk_offset[0];
+		last_player_chunk_offset[1] = curr_player_chunk_offset[1];
+	}
 
 	glUseProgram(programID);
 
@@ -479,8 +523,8 @@ void render_looper()
 		vec3_add(vresult, playerpos, looked_at);
 		/*TODO: add check if values are inside a loaded chunk at all
 		 * also add calculation of the actual chunk and noch just 0/0 */
-		int cx = (int)looked_at[0]/CHUNK_LIM_HOR;
-		int cz = (int)looked_at[2]/CHUNK_LIM_HOR;
+		int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
+		int cz = (int)floor(looked_at[2]/CHUNK_LIM_HOR);
 		//SDL_Log("in chunk: %i|%i", cx, cz);
 		if(((cx >= 0) && (cx < 3)) && ((cz >= 0) && (cz < 3)) && (((int)looked_at[1]  >= 0) && ((int)looked_at[1] < CHUNK_LIM_VER))) {
 			if(world(cx, cz)->data[((int)looked_at[0])%CHUNK_LIM_HOR][(int)looked_at[1]][((int)looked_at[2])%CHUNK_LIM_HOR].id == 0) {

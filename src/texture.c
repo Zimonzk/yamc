@@ -23,7 +23,7 @@ void loadBMP_custom(const char * imagepath, GLuint textureID, unsigned int block
 	if (!file) {
 		SDL_Log("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath);
 		getchar();
-		//return 0;
+		return;
 	} else {
 		SDL_Log("Opened texture file");
 	}
@@ -34,17 +34,17 @@ void loadBMP_custom(const char * imagepath, GLuint textureID, unsigned int block
 	if ( fread(header, 1, 54, file)!=54 ){
 		SDL_Log("Not a correct BMP file\n");
 		fclose(file);
-		//return 0;
+		return;
 	}
 	// A BMP files always begins with "BM"
 	if ( header[0]!='B' || header[1]!='M' ){
 		SDL_Log("Not a correct BMP file\n");
 		fclose(file);
-		//return 0;
+		return;
 	}
 	// Make sure this is a 24bpp file
-	if ( *(int*)&(header[0x1E])!=0  )         {SDL_Log("Not a correct BMP file\n");    fclose(file); /*return 0;*/}
-	if ( *(int*)&(header[0x1C])!=24 )         {SDL_Log("Not a correct BMP file\n");    fclose(file); /*return 0;*/}
+	if ( *(int*)&(header[0x1E])!=0  )         {SDL_Log("Not a correct BMP file\n");    fclose(file); return;}
+	if ( *(int*)&(header[0x1C])!=24 )         {SDL_Log("Not a correct BMP file\n");    fclose(file); return;}
 
 	// Read the information about the image
 	dataPos    = *(int*)&(header[0x0A]);
@@ -63,11 +63,19 @@ void loadBMP_custom(const char * imagepath, GLuint textureID, unsigned int block
 	}
 	// Create a buffer
 	data = malloc(sizeof(char) * imageSize);
+	if(!data) {
+		SDL_Log("unable to allocate image memory");
+		return;
+	}
 
 	fseek(file, dataPos, SEEK_SET);
 
+	SDL_Log("Image size: %u", imageSize);
 	// Read the actual data from the file into the buffer
-	fread(data,1,imageSize,file);
+	if(fread(data,1,imageSize,file) != imageSize) {
+		SDL_Log("couldn't read");
+		return;
+	}
 
 	//dumpBMPdat(data, imageSize);
 
@@ -85,7 +93,7 @@ void loadBMP_custom(const char * imagepath, GLuint textureID, unsigned int block
 		//glTexStorage3D(GL_TEXTURE_2D_ARRAY, mipLevelCount, GL_RGBA8, width, height, layerCount);
 		// Give the image to OpenGL
 		//glTexStorage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, width, height, 2);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, width, height, 2, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB, width, height, 2, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
 		first = 0;
 	}
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, width, height, layerCount, GL_RGBA, GL_UNSIGNED_BYTE, texels);
@@ -129,7 +137,7 @@ GLuint load_bmp_gui(const char * imagepath){
 	if (!file) {
 		SDL_Log("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath);
 		getchar();
-		//return 0;
+		return 0;
 	} else {
 		SDL_Log("Opened texture file");
 	}
@@ -140,17 +148,17 @@ GLuint load_bmp_gui(const char * imagepath){
 	if ( fread(header, 1, 54, file)!=54 ){
 		SDL_Log("Not a correct BMP file\n");
 		fclose(file);
-		//return 0;
+		return 0;
 	}
 	// A BMP files always begins with "BM"
 	if ( header[0]!='B' || header[1]!='M' ){
 		SDL_Log("Not a correct BMP file\n");
 		fclose(file);
-		//return 0;
+		return 0;
 	}
 	// Make sure this is a 24bpp file
-	if ( *(int*)&(header[0x1E])!=0  )         {SDL_Log("Not a correct BMP file\n");    fclose(file); /*return 0;*/}
-	if ( *(int*)&(header[0x1C])!=24 )         {SDL_Log("Not a correct BMP file\n");    fclose(file); /*return 0;*/}
+	if ( *(int*)&(header[0x1E])!=0  )         {SDL_Log("Not a correct BMP file\n");    fclose(file); return 0;}
+	if ( *(int*)&(header[0x1C])!=24 )         {SDL_Log("Not a correct BMP file\n");    fclose(file); return 0;}
 
 	// Read the information about the image
 	dataPos    = *(int*)&(header[0x0A]);
@@ -169,6 +177,10 @@ GLuint load_bmp_gui(const char * imagepath){
 	}
 	// Create a buffer
 	data = malloc(sizeof(char) * imageSize);
+	if(!data) {
+		SDL_Log("unable to allocate image mamory");
+		return 0;
+	}
 
 	fseek(file, dataPos, SEEK_SET);
 
