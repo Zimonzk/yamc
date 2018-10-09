@@ -226,9 +226,6 @@ static long meshindices_base_offset[2] = {0, 0}; /*x, z*/
 void render_init()
 {	
 	SDL_Log("#Triangles@world[0][0]: %i", determine_mescha_size(world(0, 0), neig));
-	/* init glew */
-	glewExperimental = GL_TRUE;
-	glewInit();
 
 	/* This makes our buffer swap syncronized with the monitor's vertical refresh */
 	SDL_GL_SetSwapInterval(1);
@@ -237,6 +234,7 @@ void render_init()
 		for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
 			SDL_Log("generating mesh of chunk [%i][%i]", x, z);
 			meshindices[x][z] = x + z * (2*CHUNK_LOADING_RANGE-1);
+			//SDL_Log("resulting meshindex: %i", (int) meshindices[x][z]);
 
 			glGenBuffers(1, &meshes[meshindices[x][z]].vertexbuffer);
 			glGenBuffers(1, &meshes[meshindices[x][z]].texibuffer);
@@ -262,14 +260,6 @@ void render_init()
 	// Give our vertices to OpenGL.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(block_outline_data), block_outline_data, GL_STATIC_DRAW);
 
-	// Create one OpenGL texture
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-
-	// Create one OpenGL texture
-	/*texture = */loadBMP_custom("textures/blocks/side.bmp", textureID, 1);
-	/*texture2 = */loadBMP_custom("textures/blocks/top.bmp", textureID, 2);
-	//textureID_crosshair = load_bmp_gui("textures/ui/crosshair.bmp");
 	textureID_crosshair = SOIL_load_OGL_texture("textures/ui/crosshair.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
 	SDL_Log("TX: %u", textureID_crosshair);
 	glBindTexture(GL_TEXTURE_2D, textureID_crosshair);
@@ -298,7 +288,7 @@ void render_init()
 
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, textureID);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, get_textureID());
 	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
 
 
@@ -326,10 +316,20 @@ void render_init()
 
 void update_mesh(int x, int z) {
 	meshes[meshindices[x][z]].num_triangles = generate_mescha(
-			world(x, z), 
+			world(x + meshindices_base_offset[0], z + meshindices_base_offset[1]), 
 			neig,
 			meshes[meshindices[x][z]].vertexbuffer,
 			meshes[meshindices[x][z]].texibuffer
+			);
+}
+
+void update_mesh_abs(int x, int z) {
+	//SDL_Log("Updating mesh of chunk absolute: %i|%i, relative: %i|%i", x, z, x-meshindices_base_offset[0], z-meshindices_base_offset[1]);
+	meshes[meshindices[x-meshindices_base_offset[0]][z-meshindices_base_offset[1]]].num_triangles = generate_mescha(
+			world(x, z), 
+			neig,
+			meshes[meshindices[x-meshindices_base_offset[0]][z-meshindices_base_offset[1]]].vertexbuffer,
+			meshes[meshindices[x-meshindices_base_offset[0]][z-meshindices_base_offset[1]]].texibuffer
 			);
 }
 
@@ -425,26 +425,39 @@ void render_looper()
 		new_meshindices_base_offset[0] = curr_player_chunk_offset[0] - CHUNK_LOADING_RANGE + 1;
 		new_meshindices_base_offset[1] = curr_player_chunk_offset[1] - CHUNK_LOADING_RANGE + 1;
 
-		offsetchange[0] = meshindices_base_offest[0] - new_meshindices_base_offset[0];
-		offsetchange[1] = meshindices_base_offest[1] - new_meshindices_base_offset[1];
+		offsetchange[0] = new_meshindices_base_offset[0] - meshindices_base_offset[0];
+		offsetchange[1] = new_meshindices_base_offset[1] - meshindices_base_offset[1];
 
-		for(int x = 0; x < CHUNK_LOADING_RANGE; x++) {
-			for(int z = 0; z < CHUNK_LOADING_RANGE; z++) {
+		for(int x = 0; x < (2*CHUNK_LOADING_RANGE-1); x++) {
+			for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
 				if(	((x - offsetchange[0]) >= 0) && ((z - offsetchange[1]) >= 0) &&
-					(((x - offsetchange[0]) < CHUNK_LOADING_RANGE)) && (((z - offsetchange[1]) < CHUNK_LOADING_RANGE))) {
-					/*keep that mesh but remapp it*/
+					(((x - offsetchange[0]) < (2*CHUNK_LOADING_RANGE-1))) && (((z - offsetchange[1]) < (2*CHUNK_LOADING_RANGE-1)))) {
+					/*keep that mesh but remap it*/
 					new_meshindices[x-offsetchange[0]][z-offsetchange[1]] = meshindices[x][z];
 				} else {
 					/*make new mesh*/
 					/*invert old distance from old center to get new distance from new center*/
-					new_meshindices[x + 1 - CHUNK_LOADING_RANGE][z + 1 - CHUNK_LOADING_RANGE] = meshindices[x][z];
-					update_mesh(x + 1 - CHUNK_LOADING_RANGE, z + 1 - CHUNK_LOADING_RANGE);
+					new_meshindices[2*(CHUNK_LOADING_RANGE - 1) - x][2*(CHUNK_LOADING_RANGE - 1) - z] = meshindices[x][z];
+					//SDL_Log("Meshindex: %i - [%i][%i]", (int) meshindices[x][z], x, z);
+					meshes[meshindices[x][z]].num_triangles = generate_mescha(
+						world(	2*(CHUNK_LOADING_RANGE - 1) - x + new_meshindices_base_offset[0],
+							2*(CHUNK_LOADING_RANGE - 1) - z + new_meshindices_base_offset[1]), 
+						neig,
+						meshes[meshindices[x][z]].vertexbuffer,
+						meshes[meshindices[x][z]].texibuffer
+					);
+					SDL_Log(	"making new mesh at %i|%i into %i",
+							2*(CHUNK_LOADING_RANGE - 1) - x + new_meshindices_base_offset[0],
+							2*(CHUNK_LOADING_RANGE - 1) - z + new_meshindices_base_offset[1],
+							meshindices[x][z]);
+					//SDL_Log("CHUNK[%i][%i] - [%i][%i]", 2*(CHUNK_LOADING_RANGE - 1) - x + new_meshindices_base_offset[0], 2*(CHUNK_LOADING_RANGE - 1) - z + new_meshindices_base_offset[1], x, z);
 				}
 			}
 		}
 
-		for(int x = 0; x < CHUNK_LOADING_RANGE; x++) {
-			for(int z = 0; z < CHUNK_LOADING_RANGE; z++) {
+		for(int x = 0; x < (2*CHUNK_LOADING_RANGE-1); x++) {
+			for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
+				SDL_Log("writing meshindex: %i - [%i][%i]", (int) new_meshindices[x][z], x, z);
 				meshindices[x][z] = new_meshindices[x][z];
 			}
 		}
@@ -454,6 +467,7 @@ void render_looper()
 
 		last_player_chunk_offset[0] = curr_player_chunk_offset[0];
 		last_player_chunk_offset[1] = curr_player_chunk_offset[1];
+		SDL_Log("Changed chunk: player: %f|%f, player_chunk: %i|%i, base_offset: %i|%i", playerpos[0], playerpos[2], curr_player_chunk_offset[0], curr_player_chunk_offset[1], meshindices_base_offset[0], meshindices_base_offset[1]);
 	}
 
 	glUseProgram(programID);
@@ -488,9 +502,9 @@ void render_looper()
 					0, 
 					(void*)0 
 					);
-			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * (world(x, z)->offset_X - player_chunk_offset[0]);
+			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * (x+meshindices_base_offset[0] - player_chunk_offset[0]);
 			model_position[1] = y1 - playerpos[1];
-			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale * (world(x, z)->offset_Z - player_chunk_offset[1]);
+			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale * (z+meshindices_base_offset[1] - player_chunk_offset[1]);
 			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
 
 			update_model();
@@ -522,19 +536,21 @@ void render_looper()
 		vresult[3] = 1.0f;
 		vec3_add(vresult, playerpos, looked_at);
 		/*TODO: add check if values are inside a loaded chunk at all
-		 * also add calculation of the actual chunk and noch just 0/0 */
+		 * also add calculation of the actual chunk and not just 0/0 */
 		int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
 		int cz = (int)floor(looked_at[2]/CHUNK_LIM_HOR);
+		int crx = ((((int)floor(looked_at[0])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
+		int crz = ((((int)floor(looked_at[2])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
 		//SDL_Log("in chunk: %i|%i", cx, cz);
-		if(((cx >= 0) && (cx < 3)) && ((cz >= 0) && (cz < 3)) && (((int)looked_at[1]  >= 0) && ((int)looked_at[1] < CHUNK_LIM_VER))) {
-			if(world(cx, cz)->data[((int)looked_at[0])%CHUNK_LIM_HOR][(int)looked_at[1]][((int)looked_at[2])%CHUNK_LIM_HOR].id == 0) {
+		if((((cx - meshindices_base_offset[0]) >= 0) && ((cx - meshindices_base_offset[0]) < (2*CHUNK_LOADING_RANGE-1))) && (((cz - meshindices_base_offset[1]) >= 0) && ((cz - meshindices_base_offset[1]) < (2*CHUNK_LOADING_RANGE-1))) && (((int)looked_at[1]  >= 0) && ((int)looked_at[1] < CHUNK_LIM_VER))) {
+			if(world(cx, cz)->data[crx][(int)looked_at[1]][crz].id == 0) {
 				//find the side of the block we appear to be looking at
 				GLfloat over[3];
 				char inversion[3] = {0, 0, 0};
 				GLfloat vsmallest;
 				char nsmallest = 0;
 				for(int n = 0; n < 3; n++) {
-					over[n] = looked_at[n] - (int) looked_at[n];
+					over[n] = looked_at[n] - (int) floor(looked_at[n]);
 					if(over[n] > 0.5f) {
 						inversion[n] = 1;
 						over[n] = 1.0f - over[n];
@@ -547,7 +563,7 @@ void render_looper()
 						nsmallest = n;
 					}
 				}
-				looked_at[nsmallest] = ((int)looked_at[nsmallest]) + (2.0f * inversion[nsmallest] - 1.0f);
+				looked_at[nsmallest] = ((int)floor(looked_at[nsmallest])) + (2.0f * inversion[nsmallest] - 1.0f);
 			}
 		}
 		//SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
@@ -567,9 +583,9 @@ void render_looper()
 			(void*)0            // array buffer offset
 			);
 
-	model_position[0] = (int)looked_at[0] - playerpos[0];
+	model_position[0] = (int)floor(looked_at[0]) - playerpos[0];
 	model_position[1] = (int)looked_at[1] - playerpos[1];
-	model_position[2] = (int)looked_at[2] - playerpos[2];
+	model_position[2] = (int)floor(looked_at[2]) - playerpos[2];
 
 	update_model();
 	update_mvp();

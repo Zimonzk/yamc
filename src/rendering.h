@@ -6,6 +6,7 @@
 
 void render_init();
 void update_mesh(int x, int z);
+void update_mesh_abs(int x, int z);
 void render_looper();
 
 void update_model();

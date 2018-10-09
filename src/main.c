@@ -14,7 +14,7 @@
 //#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
-#define PROGRAM_NAME "Tutorial1"
+#define PROGRAM_NAME "YAMC"
 
 #include "dndndefs.h"
 #include "shader.h"
@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
 
+	unsigned int side_texi, top_texi;
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
 		sdldie("Unable to initialize SDL"); /* Or die on error */
@@ -83,6 +84,16 @@ int main(int argc, char *argv[])
 
 	/* Create our opengl context and attach it to our window */
 	maincontext = SDL_GL_CreateContext(mainwindow);
+	
+	/* init glew */
+	glewExperimental = GL_TRUE;
+	glewInit();
+
+	/* load some block textures to texture our block with */
+	side_texi = load_block_texture("textures/blocks/side.bmp");
+	top_texi = load_block_texture("textures/blocks/top.bmp");
+	/* create a block */
+	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
 	render_init();
 
@@ -105,13 +116,19 @@ int main(int argc, char *argv[])
 					handle_mousemotion_event(&event);
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					world((int)looked_at[0]/CHUNK_LIM_HOR, (int)looked_at[2]/CHUNK_LIM_HOR)->data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].id = 0;
-					world((int)looked_at[0]/CHUNK_LIM_HOR, (int)looked_at[2]/CHUNK_LIM_HOR)->data[(int)looked_at[0]][(int)looked_at[1]][(int)looked_at[2]].properties = 0;
-					/*TODO meshindices for translating chunk to mesh
-					 * TODO check if the chunk is loaded (has mesh)*/
-					update_mesh(0, 0);
-					SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
-					SDL_Log("~~~~~~ %i|%i|%i", (int)looked_at[0], (int)looked_at[1], (int)looked_at[2]);
+					{
+						int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
+						int cz = (int)floor(looked_at[2]/CHUNK_LIM_HOR);
+						int crx = ((((int)floor(looked_at[0])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
+						int crz = ((((int)floor(looked_at[2])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
+						chunk* mchunk = world(cx, cz);
+						mchunk->data[crx][(int)looked_at[1]][crz].id = 0;
+						mchunk->data[crx][(int)looked_at[1]][crz].properties = 0;
+						/* TODO check if the chunk is loaded (has mesh)*/
+						update_mesh_abs(cx, cz);
+						SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+						SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
+					}
 					break;
 				default:
 					break;

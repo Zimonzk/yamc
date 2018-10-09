@@ -1,0 +1,14 @@
+- block system
+- lighting system
+- gui framework
+- main menu (plugin intergration)
+- settings (framework)
+- plugin framework
+- liquid system (finite pls)
+- entity system
+- colision system
+- item system
+- block uptate & block data system (like minecrafts tile entities)
+- world generation framework (biomes, ores, caves, structures, ...)
+- multiplayer support
+- sound

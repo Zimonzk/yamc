@@ -4,10 +4,10 @@
 #include <SDL2/SDL.h>
 #include <math.h>
 
-static float player_pos_X = 0, player_pos_Y = 3, player_pos_Z = -10;
+static float player_pos_X = 65, player_pos_Y = 20, player_pos_Z = 65;
 static float player_pitch_rad = 0.0, player_yaw_rad = 0;
 static float player_pitching_speed = 0.003, player_yawing_speed = 0.003;
-static float player_speed = 0.007;
+static float player_speed = 2 * 0.007;
 
 long player_chunk_offset[2]={0, 0};
 

@@ -286,8 +286,11 @@ static void generate_block_side(const char* side, unsigned short x, unsigned sho
 	}
 }
 
-static void generate_block_texis(unsigned int tid, Uint32 sideIndex, GLuint* texis)
+static void generate_block_texis(unsigned int block_id, Uint32 sideIndex, GLuint* texis, enum block_side face)
 {
+	struct block_register* blrp = get_registered_block(block_id);
+	unsigned int tid = blrp->texis[face];
+	/* TODO add facing of blocks */
 	texis[6*sideIndex] = tid;
 	texis[6*sideIndex+1] = tid;
 	texis[6*sideIndex+2] = tid;
@@ -323,13 +326,13 @@ Uint32 generate_mescha(chunk* cchunk, chunk* neighbours[4], GLuint vertexbuffer,
 						/*if(neighbours[0]) { 
 							if(!(neighbours[0]->data[0][y][z].properties & BLOCK_OPAQUE)) {*/
 								generate_block_side("x+", x,y,z, mescha, 18*sideIndex);
-								generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+								generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, BACK);
 								sideIndex++;
 							/*}
 						}*/
 						if(!(cchunk->data[x-1][y][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("x-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, FRONT);
 							sideIndex++;
 						}
 					} else if(x == 0) {
@@ -337,24 +340,24 @@ Uint32 generate_mescha(chunk* cchunk, chunk* neighbours[4], GLuint vertexbuffer,
 						/*if(neighbours[1]) {
 							if(!(neighbours[1]->data[CHUNK_LIM_HOR-1][y][z].properties & BLOCK_OPAQUE)) {*/
 								generate_block_side("x-", x,y,z, mescha, 18*sideIndex);
-								generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+								generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, FRONT);
 								sideIndex++;
 							/*}
 						}*/
 						if(!(cchunk->data[x+1][y][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("x+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, BACK);
 							sideIndex++;
 						}
 					} else {
 						if(!(cchunk->data[x-1][y][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("x-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, FRONT);
 							sideIndex++;
 						}
 						if(!(cchunk->data[x+1][y][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("x+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, BACK);
 							sideIndex++;
 						}
 					}
@@ -364,13 +367,13 @@ Uint32 generate_mescha(chunk* cchunk, chunk* neighbours[4], GLuint vertexbuffer,
 						/*if(neighbours[2]) {
 							if(!(neighbours[2]->data[x][y][0].properties & BLOCK_OPAQUE)) {*/
 								generate_block_side("z+", x,y,z, mescha, 18*sideIndex);
-								generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+								generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, RIGHT);
 								sideIndex++;
 							/*}
 						}*/
 						if(!(cchunk->data[x][y][z-1].properties & BLOCK_OPAQUE)) {
 							generate_block_side("z-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LEFT);
 							sideIndex++;
 						}
 					} else if(z == 0) {
@@ -378,57 +381,57 @@ Uint32 generate_mescha(chunk* cchunk, chunk* neighbours[4], GLuint vertexbuffer,
 						/*if(neighbours[3]) {
 							if(!(neighbours[3]->data[x][y][CHUNK_LIM_HOR-1].properties & BLOCK_OPAQUE)) {*/
 								generate_block_side("z-", x,y,z, mescha, 18*sideIndex);
-								generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+								generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LEFT);
 								sideIndex++;
 							/*}
 						}*/
 						if(!(cchunk->data[x][y][z+1].properties & BLOCK_OPAQUE)) {
 							generate_block_side("z+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, RIGHT);
 							sideIndex++;
 						}
 					} else {
 						if(!(cchunk->data[x][y][z-1].properties & BLOCK_OPAQUE)) {
 							generate_block_side("z-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LEFT);
 							sideIndex++;
 						}
 						if(!(cchunk->data[x][y][z+1].properties & BLOCK_OPAQUE)) {
 							generate_block_side("z+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, RIGHT);
 							sideIndex++;
 						}
 					}
 					/*Y*/
 					if(y == (CHUNK_LIM_VER - 1)) {
 						generate_block_side("y+", x,y,z, mescha, 18*sideIndex);
-						generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+						generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, UPPER);
 						sideIndex++;
 
 						if(!(cchunk->data[x][y-1][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("y-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LOWER);
 							sideIndex++;
 						}
 					} else if(y == 0) {
 						generate_block_side("y-", x,y,z, mescha, 18*sideIndex);
-						generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+						generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LOWER);
 						sideIndex++;
 
 						if(!(cchunk->data[x][y+1][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("y+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, UPPER);
 							sideIndex++;
 						}
 					} else {
 						if(!(cchunk->data[x][y-1][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("y-", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, LOWER);
 							sideIndex++;
 						}
 						if(!(cchunk->data[x][y+1][z].properties & BLOCK_OPAQUE)) {
 							generate_block_side("y+", x,y,z, mescha, 18*sideIndex);
-							generate_block_texis(cchunk->data[x][y][z].id - 1, sideIndex, texis);
+							generate_block_texis(cchunk->data[x][y][z].id, sideIndex, texis, UPPER);
 							sideIndex++;
 						}
 					}

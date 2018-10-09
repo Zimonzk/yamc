@@ -12,10 +12,10 @@ worldgen.o: src/worldgen.c src/worldgen.h src/chunk.h src/block.h \
 region.o: src/region.c src/region.h
 shader.o: src/shader.c include/zio-list.h include/zio-con.h \
  include/zio-reader.h include/zio-list.h
-block.o: src/block.c src/block.h
+block.o: src/block.c src/block.h include/zimonzk/lists.h
 world.o: src/world.c src/world.h src/chunk.h src/block.h src/worldgen.h \
  src/dndndefs.h
 inpuit.o: src/inpuit.c src/input.h src/player.h
 chunk.o: src/chunk.c src/chunk.h src/block.h
 player.o: src/player.c src/player.h src/input.h
-texture.o: src/texture.c
+texture.o: src/texture.c include/SOIL.h

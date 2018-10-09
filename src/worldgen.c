@@ -4,7 +4,7 @@
 
 void generate_chunk(chunk* chu)
 {
-    unsigned int x, y, z;
+    int x, y, z;
     double scale = 64.0;
     static struct osn_context* ctn = 0;
 

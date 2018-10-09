@@ -3,11 +3,10 @@
 
 #include <GL/gl.h>
 
-// Load a .BMP file using our custom loader
-void loadBMP_custom(const char * imagepath, GLuint textureID, unsigned int blockid);
+/* loads a texture for use in block texturing
+ * returns an id which can be used as texture id for any block-side */
+unsigned int load_block_texture(const char *imagepath);
 
-GLuint load_bmp_gui(const char* imagepath);
-
-void dumpBMPdat(const char *data, size_t imageSize);
+GLuint get_textureID();
 
 #endif // TEXTURE_H_INCLUDED
