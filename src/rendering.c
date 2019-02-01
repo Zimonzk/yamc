@@ -21,6 +21,7 @@
 #include "open-simplex-noise.h"
 #include "SOIL.h"
 #include "world.h"
+#include "entity.h"
 
 #define NUMVERT 36
 
@@ -520,7 +521,8 @@ void render_looper()
 		}
 	}
 
-	/* TODO entity rendering here. */
+	/* entity rendering */
+	render_entities(view, projection);
 
 	/*block picking*/
 	{

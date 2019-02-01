@@ -1,13 +1,11 @@
 #version 330 core
 
-in vec3 UVW;
+in vec2 UV;
 
-out vec3 color;
+out vec4 color;
 
-//uniform sampler2D myTextureSampler;
-uniform sampler2DArray my_sampler;
+uniform sampler2D my_sampler;
 
 void main(){
-  //color = texture(myTextureSampler, UVW).rgb;
-  color = texture(my_sampler, UVW).rgb;
+  color = texture(my_sampler, UV);
 }

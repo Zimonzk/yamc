@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 /* If using gl3.h */
 /* Ensure we are using opengl's core profile only */
 #define GL3_PROTOTYPES 1
@@ -25,6 +26,8 @@
 #include "worldgen.h"
 #include "player.h"
 #include "world.h"
+#include "SOIL.h"
+#include "entity.h"
 
 #define NUMVERT 36
 
@@ -96,6 +99,26 @@ int main(int argc, char *argv[])
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
 	render_init();
+	init_entities();
+
+	{
+		struct entity_index_card card;
+		struct entity_index_card *eic;
+		struct live_entity *lep;
+		long chunk[2] = {0, 0};
+		double pos[3] = {20.0, 20.0, 20.0};
+
+		card.name = strdup("zimonzk.test");
+		card.displayname = strdup("TEST");
+		card.health = -1;
+		card.rt = RENDER_SPRITE;
+		card.em.sp.size = 20.0f;
+		card.em.sp.textureID = SOIL_load_OGL_texture("textures/blocks/stone.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+	       
+		eic = register_entity(&card);
+		
+		lep = spawn_entity(eic, chunk, pos);
+	}
 
 	SDL_Log("Entering main loop");
 

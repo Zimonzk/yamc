@@ -3,6 +3,8 @@
 
 #include "zimonzk/lists.h"
 
+#define GL3_PROTOTYPES 1
+#include <GL/glew.h>
 #include <GL/gl.h>
 
 enum render_type {RENDER_SPRITE, RENDER_BLOCK, RENDER_MODEL};
@@ -65,8 +67,10 @@ struct live_entity
 	int health;
 };
 
+int init_entities(void);
+
 /* to be used only in the rendering loop once per frame */
-void render_entities();
+void render_entities(float view[4][4], float projection[4][4]);
 
 struct entity_index_card *register_entity(struct entity_index_card *entry);
 
