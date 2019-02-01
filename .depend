@@ -10,6 +10,7 @@ main.o: src/main.c src/dndndefs.h src/shader.h src/matr.h src/texture.h \
 worldgen.o: src/worldgen.c src/worldgen.h src/chunk.h src/block.h \
  src/dndndefs.h include/open-simplex-noise.h
 region.o: src/region.c src/region.h
+entity.o: src/entity.c src/entity.h include/zimonzk/lists.h
 shader.o: src/shader.c include/zio-list.h include/zio-con.h \
  include/zio-reader.h include/zio-list.h
 block.o: src/block.c src/block.h include/zimonzk/lists.h

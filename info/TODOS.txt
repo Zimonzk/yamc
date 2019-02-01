@@ -10,3 +10,4 @@
 
 Ideas:
 - add yamnation
+- add custom limboroll story map

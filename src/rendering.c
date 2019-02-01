@@ -406,7 +406,6 @@ void update_projection()
 
 void render_looper()
 {
-	//TODO
 	int x1 = 0, y1 = 0, z1 = 0;
 	int i;
 	float playerpos[3];
@@ -414,7 +413,7 @@ void render_looper()
 	long curr_player_chunk_offset[2];
 
 	get_player_pos(playerpos);
-	/*TODO see if player changed chunk. if so change the displayed chunks*/
+	/*see if player changed chunk. if so change the displayed chunks*/
 	curr_player_chunk_offset[0] = (long)floor(playerpos[0] / CHUNK_LIM_HOR);
 	curr_player_chunk_offset[1] = (long)floor(playerpos[2] / CHUNK_LIM_HOR);
 	if((curr_player_chunk_offset[0] != last_player_chunk_offset[0]) || (curr_player_chunk_offset[1] != last_player_chunk_offset[1])) {
@@ -483,7 +482,7 @@ void render_looper()
 			glEnableVertexAttribArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, meshes[meshindices[x][z]].vertexbuffer);
 			glVertexAttribPointer(
-					0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+					0,                  // attribute 0. Must match the layout in the shader.
 					3,                  // size
 					GL_FLOAT,           // type
 					GL_FALSE,           // normalized?
@@ -502,9 +501,11 @@ void render_looper()
 					0, 
 					(void*)0 
 					);
-			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * (x+meshindices_base_offset[0] - player_chunk_offset[0]);
+			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * 
+				(x+meshindices_base_offset[0] - player_chunk_offset[0]);
 			model_position[1] = y1 - playerpos[1];
-			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale * (z+meshindices_base_offset[1] - player_chunk_offset[1]);
+			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale *
+				(z+meshindices_base_offset[1] - player_chunk_offset[1]);
 			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
 
 			update_model();
@@ -518,8 +519,13 @@ void render_looper()
 			glDisableVertexAttribArray(2);
 		}
 	}
+
+	/* TODO entity rendering here. */
+
 	/*block picking*/
 	{
+		/* TODO Extract routine into a function
+		 * which can pick blocks */
 		GLfloat depth;
 		float mhelp0[4][4] = {}, mhelp1[4][4] = {};
 		float vcenter[4] = {0.0f, 0.0f, 0.0f, 1.0f}, vresult[4] = {};

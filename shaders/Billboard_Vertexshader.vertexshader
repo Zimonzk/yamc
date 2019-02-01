@@ -1,0 +1,38 @@
+#version 330 core
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 vertexPosition;
+
+out vec2 UV;
+  
+// Values that stay constant for the whole mesh.
+uniform float scale = 1;
+uniform vec3 position;
+uniform mat4 MVP;
+
+void main() {
+  int c = gl_VertexID % 6;
+
+  gl_Position = vec4(scaledPosition, 0, 1);
+
+  switch(c) {
+    case 0:
+    case 3:
+      UV.x=0.0;
+      UV.y=0.0;
+      break;
+    case 1:
+      UV.x=1.0;
+      UV.y=0.0;
+      break;
+    case 2:
+    case 4:
+      UV.x=1.0;
+      UV.y=1.0;
+      break;
+    case 5:
+      UV.x=0.0;
+      UV.y=1.0;
+      break;
+  }
+}
