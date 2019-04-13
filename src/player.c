@@ -1,8 +1,14 @@
+#define _USE_MATH_DEFINES
+
 #include "player.h"
 #include "input.h"
 
 #include <SDL2/SDL.h>
 #include <math.h>
+
+#ifndef M_PI /* ensure that M_PI is defined as it is not required by the standard */
+    #define M_PI 3.14159265358979323846
+#endif
 
 static float player_pos_X = 65, player_pos_Y = 20, player_pos_Z = 65;
 static float player_pitch_rad = 0.0, player_yaw_rad = 0;
