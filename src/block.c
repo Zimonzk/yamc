@@ -1,6 +1,12 @@
 #include "block.h"
 
+#define _POSIX_C_SOURCE 200809L
+#ifdef WINNT
 #include <gl/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+#include <string.h>
 
 #include "zimonzk/lists.h"
 

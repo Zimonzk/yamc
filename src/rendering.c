@@ -1,6 +1,9 @@
 #include "rendering.h"
 
 #include <math.h>
+#ifndef M_PI /* ensure that M_PI is defined as it is not required by the standard */
+    #define M_PI 3.14159265358979323846
+#endif
 /* If using gl3.h */
 /* Ensure we are using opengl's core profile only */
 #define GL3_PROTOTYPES 1
@@ -260,6 +263,7 @@ void render_init()
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_outline);
 	// Give our vertices to OpenGL.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(block_outline_data), block_outline_data, GL_STATIC_DRAW);
+
 
 	textureID_crosshair = SOIL_load_OGL_texture("textures/ui/crosshair.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
 	SDL_Log("TX: %u", textureID_crosshair);
