@@ -3,7 +3,15 @@
 #include "matr.h"
 
 #include <string.h>
-#include <SDL2/SDL.h>
+
+#define GL3_PROTOTYPES 1
+#if defined(__APPLE__)
+#include <OpenGL/glew.h>
+#include <OpenGL/gl.h>
+#else
+#include <GL/glew.h>
+#include <GL/gl.h>
+#endif
 
 #include "zimonzk/lists.h"
 

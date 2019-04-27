@@ -9,8 +9,13 @@
 /* If using gl3.h */
 /* Ensure we are using opengl's core profile only */
 #define GL3_PROTOTYPES 1
+#if defined(__APPLE__)
+#include <OpenGL/glew.h>
+#include <OpenGL/gl.h>
+#else
 #include <GL/glew.h>
 #include <GL/gl.h>
+#endif
 
 //#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>

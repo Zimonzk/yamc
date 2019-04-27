@@ -3,6 +3,8 @@
 #define _POSIX_C_SOURCE 200809L
 #ifdef WINNT
 #include <gl/gl.h>
+#elif defined (__APPLE__)
+#include <OpenGL/gl.h>
 #else
 #include <GL/gl.h>
 #endif

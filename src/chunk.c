@@ -1,8 +1,13 @@
 #include "chunk.h"
 
 #define GL3_PROTOTYPES 1
+#if defined(__APPLE__)
+#include <OpenGL/glew.h>
+#include <OpenGL/gl.h>
+#else
 #include <GL/glew.h>
 #include <GL/gl.h>
+#endif
 #include <SDL2/SDL.h>
 
 Uint32 blocks_filled(chunk* cchunk)

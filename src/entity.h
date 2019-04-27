@@ -4,8 +4,13 @@
 #include "zimonzk/lists.h"
 
 #define GL3_PROTOTYPES 1
+#if defined(__APPLE__)
+#include <OpenGL/glew.h>
+#include <OpenGL/gl.h>
+#else
 #include <GL/glew.h>
 #include <GL/gl.h>
+#endif
 
 enum render_type {RENDER_SPRITE, RENDER_BLOCK, RENDER_MODEL};
 

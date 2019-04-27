@@ -1,6 +1,14 @@
 #include <zimonzk/lists.h>
 
+#define GL3_PROTOTYPES 1
+#if defined(__APPLE__)
+#include <OpenGL/glew.h>
+#include <OpenGL/gl.h>
+#else
 #include <GL/glew.h>
+#include <GL/gl.h>
+#endif
+
 #include <SDL2/SDL.h>
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path)
