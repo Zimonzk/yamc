@@ -14,7 +14,7 @@ $(info $(SRC))
 $(info $(OBJ))
 DEPENDFILE = .depend
 
-yamc: $(OBJ) dep
+yamc: $(OBJ) dep lib/liblists.a lib/libsimplex.a lib/libSOIL.a
 	$(CC) $(CFLAGS) -o yamc $(OBJ) $(LDFLAGS)
 
 dep: $(SRC)
@@ -24,6 +24,31 @@ dep: $(SRC)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+lib/liblists.a: lists_submodule/liblists.a
+	cp lists_submodule/liblists.a lib/liblists.a 
+
+lists_submodule/liblists.a: FORCE
+	cd lists_submodule && make
+
+lib/libsimplex.a: simplex-noise_submodule/open-simplex-noise.o
+	ar -rcs lib/libsimplex.a simplex-noise_submodule/open-simplex-noise.o
+
+simplex-noise_submodule/open-simplex-noise.o: FORCE
+	cd simplex-noise_submodule && make
+
+lib/libSOIL.a: SOIL_submodule/lib SOIL_submodule/lib/libSOIL.a
+	cp SOIL_submodule/lib/libSOIL.a lib/libSOIL.a 
+
+SOIL_submodule/lib:
+	mkdir SOIL_submodule/lib
+
+SOIL_submodule/lib/libSOIL.a: FORCE
+	cd SOIL_submodule && make
+
+
+FORCE:
+
 
 .PHONY: clean
 clean:

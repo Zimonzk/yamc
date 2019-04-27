@@ -1,0 +1,9 @@
+[submodule "SOIL_submodule"]
+	path = SOIL_submodule
+	url = git@github.com:njcrawford/Simple-OpenGL-Image-Library.git
+[submodule "simplex-noise_submodule"]
+	path = simplex-noise_submodule
+	url = git@github.com:smcameron/open-simplex-noise-in-c.git
+[submodule "lists_submodule"]
+	path = lists_submodule
+	url = git@github.com:Zimonzk/lists.git
