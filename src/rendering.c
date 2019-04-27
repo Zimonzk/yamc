@@ -578,7 +578,7 @@ void render_looper()
 				looked_at[nsmallest] = ((int)floor(looked_at[nsmallest])) + (2.0f * inversion[nsmallest] - 1.0f);
 			}
 		}
-		//SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+		SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
 	}
 
 	/*selected block outline*/

@@ -80,6 +80,7 @@ void render_entities(float view[4][4], float projection[4][4])
 		SDL_Log("RENDER %s!", eic->name);
 		switch(eic->rt) {
 		case RENDER_SPRITE:
+			SDL_Log("Spreit");
 			glUseProgram(programID_billboard);
 			glActiveTexture(GL_TEXTURE0);
 			glDisable(GL_BLEND);
@@ -124,6 +125,7 @@ void render_entities(float view[4][4], float projection[4][4])
 						lep->pos[1],
 						lep->pos[2]);
 					glEnableVertexAttribArray(0);
+					glDisable(GL_CULL_FACE);
 					glDrawArrays(GL_TRIANGLES, 0, 9);
 					glDisableVertexAttribArray(0);
 					break;
@@ -170,6 +172,7 @@ struct live_entity *spawn_entity(struct entity_index_card *type,
 	lep->type = type;
 	memcpy(lep->chunk_offset, chunk, 2 * sizeof(long));
 	memcpy(lep->pos, pos, 3 * sizeof(double));
+
 
 	arraylist_append(&type->entity_pointers, &lep);
 
