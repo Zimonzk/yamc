@@ -39,6 +39,7 @@ static GLuint billboard_uniformID_scale;
 static GLuint billboard_uniformID_position;
 static GLuint billboard_uniformID_CameraRight_worldspace;
 static GLuint billboard_uniformID_VP;
+static GLuint billboard_uniformID_sampler;
 
 arraylist entity_register;
 
@@ -63,6 +64,8 @@ int init_entities()
 			programID_billboard, "CameraRight_worldspace");
 	billboard_uniformID_VP = glGetUniformLocation(
 			programID_billboard, "VP");
+	billboard_uniformID_sampler = glGetUniformLocation(
+			programID_billboard, "my_sampler");
 
 	arraylist_init(	&entity_register, 
 			sizeof(struct entity_index_card), 
@@ -86,35 +89,39 @@ void render_entities(float view[4][4], float projection[4][4])
 			arraylist_get(&entity_register, i);
 		//SDL_Log("RENDER %s!", eic->name);
 		switch(eic->rt) {
-		case RENDER_SPRITE:
-			//SDL_Log("Spreit");
-			glUseProgram(programID_billboard);
-			glActiveTexture(GL_TEXTURE0);
-			glDisable(GL_BLEND);
-			glUniformMatrix4fv(
-				billboard_uniformID_VP,
-				1,
-				GL_FALSE,
-				vp);
-			glUniform1f(
-				billboard_uniformID_scale,
-				eic->em.sp.size);
-			glUniform3f(
-				billboard_uniformID_CameraRight_worldspace,
-				view[0][0],
-				view[1][0],
-				view[2][0]);
-			glBindTexture(
-				GL_TEXTURE_2D,
-				eic->em.sp.textureID);
-			//SDL_Log("textureID:%i", eic->em.sp.textureID);
-			break;
-		case RENDER_BLOCK:
-			break;
-		case RENDER_MODEL:
-			break;
-		default:
-			sdldie("Invalid render type of entity.");
+			case RENDER_SPRITE:
+				//SDL_Log("Spreit");
+				glUseProgram(programID_billboard);
+				glActiveTexture(GL_TEXTURE0);
+				glUniform1i(billboard_uniformID_sampler, 0);
+				glDisable(GL_BLEND);
+				glUniformMatrix4fv(
+						billboard_uniformID_VP,
+						1,
+						GL_FALSE,
+						vp);
+				glUniform1f(
+						billboard_uniformID_scale,
+						eic->em.sp.size);
+				glUniform3f(
+						billboard_uniformID_CameraRight_worldspace,
+						view[0][0],
+						view[1][0],
+						view[2][0]);
+				glBindTexture(
+						GL_TEXTURE_2D,
+						eic->em.sp.textureID);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+				//SDL_Log("textureID:%i", eic->em.sp.textureID);
+				break;
+			case RENDER_BLOCK:
+				break;
+			case RENDER_MODEL:
+				break;
+			default:
+				sdldie("Invalid render type of entity.");
 		}
 
 		for(int j = 0; j < eic->entity_pointers.used_units; j++) {
@@ -128,13 +135,23 @@ void render_entities(float view[4][4], float projection[4][4])
 			switch(eic->rt) {
 				case RENDER_SPRITE:
 					glUniform3f(
-						billboard_uniformID_position,
-						lep->pos[0],
-						lep->pos[1],
-						lep->pos[2]);
+							billboard_uniformID_position,
+							lep->pos[0],
+							lep->pos[1],
+							lep->pos[2]);
 					glEnableVertexAttribArray(0);
+					glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer_billboard);
+					glVertexAttribPointer(
+							0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+							3,                  // size
+							GL_FLOAT,           // type
+							GL_FALSE,           // normalized?
+							0,                  // stride
+							(void*)0            // array buffer offset
+							);
 					glDisable(GL_CULL_FACE);
-					glDrawArrays(GL_TRIANGLES, 0, 9);
+					glDrawArrays(GL_TRIANGLES, 0, 6);
+					glEnable(GL_CULL_FACE);
 					glDisableVertexAttribArray(0);
 					break;
 				case RENDER_BLOCK:
@@ -162,13 +179,13 @@ struct entity_index_card *register_entity(struct entity_index_card *entry)
 {
 	struct entity_index_card *ic;
 	arraylist_append(&entity_register, entry);
-	
+
 	ic = arraylist_get(&entity_register,
-		       entity_register.used_units - 1);
+			entity_register.used_units - 1);
 
 	arraylist_init(	&ic->entity_pointers,
-		       	sizeof(struct live_entity *),
-		       	8 );
+			sizeof(struct live_entity *),
+			8 );
 	return ic;
 }
 
@@ -197,7 +214,7 @@ int destroy_entity(struct live_entity *entity)
 	 * otherwise return -1 */
 	for(int i = 0; i < entity_pointers->used_units; i++) {
 		struct live_entity **lepp =
-		       arraylist_get(entity_pointers, i);
+			arraylist_get(entity_pointers, i);
 		struct live_entity *lep = *lepp;
 		if(lep == entity) {
 			/* TODO entity death routines */

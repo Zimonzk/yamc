@@ -398,9 +398,9 @@ void update_view()
 	get_player_right(help0);
 	vec3_cross(help0, camera_center, up_vector);
 
-	camera_position[0] = 0;
+	/*camera_position[0] = 0;
 	camera_position[1] = 0;
-	camera_position[2] = 0;
+	camera_position[2] = 0;*/
 
 	vec3_add(camera_center, camera_position, camera_center);
 
@@ -509,10 +509,10 @@ void render_looper()
 					0, 
 					(void*)0 
 					);
-			model_position[0] = x1 - playerpos[0] + CHUNK_LIM_HOR * model_scale * 
+			model_position[0] = x1 /*- playerpos[0]*/ + CHUNK_LIM_HOR * model_scale * 
 				(x+meshindices_base_offset[0] - player_chunk_offset[0]);
-			model_position[1] = y1 - playerpos[1];
-			model_position[2] = z1 - playerpos[2] + CHUNK_LIM_HOR * model_scale *
+			model_position[1] = y1 /*- playerpos[1]*/;
+			model_position[2] = z1 /*- playerpos[2]*/ + CHUNK_LIM_HOR * model_scale *
 				(z+meshindices_base_offset[1] - player_chunk_offset[1]);
 			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
 
