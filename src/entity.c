@@ -77,17 +77,17 @@ void render_entities(float view[4][4], float projection[4][4])
 
 	glDisable(GL_DEPTH_TEST);
 
-	SDL_Log("RENDER ENTITIES!");
+	//SDL_Log("RENDER ENTITIES!");
 
 	/* loop over all entities */
 	for(int i = 0; i < entity_register.used_units; i++) {
 		/* once per entity type */
 		struct entity_index_card* eic =
 			arraylist_get(&entity_register, i);
-		SDL_Log("RENDER %s!", eic->name);
+		//SDL_Log("RENDER %s!", eic->name);
 		switch(eic->rt) {
 		case RENDER_SPRITE:
-			SDL_Log("Spreit");
+			//SDL_Log("Spreit");
 			glUseProgram(programID_billboard);
 			glActiveTexture(GL_TEXTURE0);
 			glDisable(GL_BLEND);
@@ -107,7 +107,7 @@ void render_entities(float view[4][4], float projection[4][4])
 			glBindTexture(
 				GL_TEXTURE_2D,
 				eic->em.sp.textureID);
-			SDL_Log("textureID:%i", eic->em.sp.textureID);
+			//SDL_Log("textureID:%i", eic->em.sp.textureID);
 			break;
 		case RENDER_BLOCK:
 			break;
@@ -122,7 +122,7 @@ void render_entities(float view[4][4], float projection[4][4])
 			struct live_entity** lepp = arraylist_get(&eic->entity_pointers, j);
 			struct live_entity* lep = *lepp;
 
-			SDL_Log("RENDER ENTITY %s #%i!", eic->name, j);
+			//SDL_Log("RENDER ENTITY %s #%i!", eic->name, j);
 
 			/* set further values for that shader */
 			switch(eic->rt) {
