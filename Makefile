@@ -6,8 +6,9 @@ else
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 LDFLAGS = -L ./lib -framework OpenGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lm
-endif
+else
 LDFLAGS = -L ./lib -lGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lm
+endif
 endif
 
 SRCDIR = src
