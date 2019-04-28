@@ -3,6 +3,9 @@ CFLAGS = -I ./include -Wall -std=c99 -ggdb
 ifeq ($(OS),Windows_NT)
 LDFLAGS = -L ./lib -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -lzio-utils -llists -lpng -Wl,-subsystem,windows
 else
+ifeq ($(UNAME_S),Darwin)
+LDFLAGS = -L ./lib -framework OpenGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lm
+endif
 LDFLAGS = -L ./lib -lGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lm
 endif
 
