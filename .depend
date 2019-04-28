@@ -1,4 +1,4 @@
-texture.o: src/texture.c include/SOIL.h
+texture.o: src/texture.c src/texture.h
 player.o: src/player.c src/player.h src/input.h
 chunk.o: src/chunk.c src/chunk.h src/block.h
 inpuit.o: src/inpuit.c src/input.h src/player.h
@@ -12,11 +12,10 @@ worldgen.o: src/worldgen.c src/worldgen.h src/chunk.h src/block.h \
  src/dndndefs.h include/open-simplex-noise.h
 main.o: src/main.c src/dndndefs.h src/shader.h src/matr.h src/texture.h \
  src/input.h src/rendering.h src/chunk.h src/block.h src/worldgen.h \
- src/player.h src/world.h include/SOIL.h src/entity.h \
- include/zimonzk/lists.h
+ src/player.h src/world.h src/entity.h include/zimonzk/lists.h
 jsonconfig.o: src/jsonconfig.c src/jsonconfig.h
 matr.o: src/matr.c
 rendering.o: src/rendering.c src/rendering.h src/chunk.h src/block.h \
  src/dndndefs.h src/shader.h src/matr.h src/texture.h src/input.h \
- src/player.h src/worldgen.h include/open-simplex-noise.h include/SOIL.h \
- src/world.h src/entity.h include/zimonzk/lists.h
+ src/player.h src/worldgen.h include/open-simplex-noise.h src/world.h \
+ src/entity.h include/zimonzk/lists.h

@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS = -I ./include -Wall -std=c99 -ggdb
 ifeq ($(OS),Windows_NT)
-LDFLAGS = -L ./lib -lsoil -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -lzio-utils -llists -Wl,-subsystem,windows
+LDFLAGS = -L ./lib -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -lzio-utils -llists -lpng -Wl,-subsystem,windows
 else
-LDFLAGS = -L ./lib -lSOIL -lGL -lGLEW -lsimplex -llists -lSDL2 -lm
+LDFLAGS = -L ./lib -lGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lm
 endif
 
 SRCDIR = src
@@ -14,7 +14,7 @@ $(info $(SRC))
 $(info $(OBJ))
 DEPENDFILE = .depend
 
-yamc: $(OBJ) dep lib/liblists.a lib/libsimplex.a lib/libSOIL.a
+yamc: $(OBJ) dep lib/liblists.a lib/libsimplex.a
 	$(CC) $(CFLAGS) -o yamc $(OBJ) $(LDFLAGS)
 
 dep: $(SRC)
@@ -36,16 +36,6 @@ lib/libsimplex.a: simplex-noise_submodule/open-simplex-noise.o
 
 simplex-noise_submodule/open-simplex-noise.o: FORCE
 	cd simplex-noise_submodule && make
-
-lib/libSOIL.a: SOIL_submodule/lib SOIL_submodule/lib/libSOIL.a
-	cp SOIL_submodule/lib/libSOIL.a lib/libSOIL.a 
-
-SOIL_submodule/lib:
-	mkdir SOIL_submodule/lib
-
-SOIL_submodule/lib/libSOIL.a: FORCE
-	cd SOIL_submodule && make
-
 
 FORCE:
 

@@ -26,7 +26,6 @@
 #include "player.h"
 #include "worldgen.h"
 #include "open-simplex-noise.h"
-#include "SOIL.h"
 #include "world.h"
 #include "entity.h"
 
@@ -269,12 +268,12 @@ void render_init()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(block_outline_data), block_outline_data, GL_STATIC_DRAW);
 
 
-	textureID_crosshair = SOIL_load_OGL_texture("textures/ui/crosshair.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+	textureID_crosshair = texture_from_png("textures/ui/crosshair.png");
 	SDL_Log("TX: %u", textureID_crosshair);
 	glBindTexture(GL_TEXTURE_2D, textureID_crosshair);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	textureID_hotbar = SOIL_load_OGL_texture("textures/ui/hotbar.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+	textureID_hotbar = texture_from_png("textures/ui/hotbar.png");
 	glBindTexture(GL_TEXTURE_2D, textureID_hotbar);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

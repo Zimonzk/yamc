@@ -30,7 +30,6 @@
 #include "worldgen.h"
 #include "player.h"
 #include "world.h"
-#include "SOIL.h"
 #include "entity.h"
 
 #define NUMVERT 36
@@ -97,8 +96,8 @@ int main(int argc, char *argv[])
 	glewInit();
 
 	/* load some block textures to texture our block with */
-	side_texi = load_block_texture("textures/blocks/side.bmp");
-	top_texi = load_block_texture("textures/blocks/top.bmp");
+	side_texi = load_block_texture("textures/blocks/side.png");
+	top_texi = load_block_texture("textures/blocks/top.png");
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
@@ -117,7 +116,7 @@ int main(int argc, char *argv[])
 		card.health = -1;
 		card.rt = RENDER_SPRITE;
 		card.em.sp.size = 20.0f;
-		card.em.sp.textureID = SOIL_load_OGL_texture("textures/blocks/stone.png", SOIL_LOAD_RGBA, 0, SOIL_FLAG_INVERT_Y);
+		card.em.sp.textureID = texture_from_png("textures/blocks/stone.png");
 	       
 		eic = register_entity(&card);
 		
