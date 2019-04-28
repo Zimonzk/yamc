@@ -68,6 +68,7 @@ unsigned char *image_from_png(const char *png_path, int *width, int *height)
 	
 	fp = fopen(png_path, "rb");
 	if(fp == NULL) {
+		SDL_Log("Can't open %s", png_path);
 		return 0;
 	}
 
@@ -87,6 +88,7 @@ unsigned char *image_from_png(const char *png_path, int *width, int *height)
 
 	if (setjmp(png_jmpbuf(png_ptr)))
 	{
+		SDL_Log("PNG read error");
 		/* Free all of the memory associated with the png_ptr and info_ptr. */
 		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 		fclose(fp);
@@ -154,9 +156,15 @@ unsigned char *image_from_png(const char *png_path, int *width, int *height)
  * puts its content into an OpenGL texture */
 GLuint texture_from_image(char *image, int width, int height)
 {
-	GLuint textureID;
+	GLuint textureID = 0;
 
 	glGenTextures(1, &textureID);
+	if(textureID == 0) {
+		SDL_Log("LOHOL");
+		return 0;
+	} else {
+		SDL_Log("id %i", textureID);
+	}
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
@@ -172,9 +180,10 @@ GLuint texture_from_png(char *png_path)
 
 	imagedata = image_from_png(png_path, &width, &height);
 	if(imagedata == 0) {
+		SDL_Log("no image data");
 		return 0;
 	}
-
+	
 	textureID = texture_from_image(imagedata, width, height);
 
 	free(imagedata);

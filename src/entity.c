@@ -107,6 +107,7 @@ void render_entities(float view[4][4], float projection[4][4])
 			glBindTexture(
 				GL_TEXTURE_2D,
 				eic->em.sp.textureID);
+			SDL_Log("textureID:%i", eic->em.sp.textureID);
 			break;
 		case RENDER_BLOCK:
 			break;
