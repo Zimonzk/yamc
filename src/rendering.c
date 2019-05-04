@@ -425,6 +425,7 @@ void render_looper()
 	curr_player_chunk_offset[0] = (long)floor(playerpos[0] / CHUNK_LIM_HOR);
 	curr_player_chunk_offset[1] = (long)floor(playerpos[2] / CHUNK_LIM_HOR);
 	if((curr_player_chunk_offset[0] != last_player_chunk_offset[0]) || (curr_player_chunk_offset[1] != last_player_chunk_offset[1])) {
+		/*TODO this should really be done in an asynchronous way to prevent fps drops*/
 		/*player changed chunk*/
 		long new_meshindices_base_offset[2];
 		long offsetchange[2];
