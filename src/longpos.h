@@ -8,7 +8,7 @@ struct longpos {
 	long chunk [2]; /*x and z number of the chunk this position refers to*/	
 	double rpos[3]; /*x, y and z coordinates of the position
 			 *relative to the chunk*/
-}
+};
 
 #define lpos_dist(P1, P2) \
 	sqrt(pow((P2.chunk[0] - P1.chunk[0]) * CHUNK_LIM_HOR + \

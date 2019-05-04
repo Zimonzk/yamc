@@ -4,7 +4,7 @@
 #ifndef M_PI /* ensure that M_PI is defined as it is not required by the standard */
     #define M_PI 3.14159265358979323846
 #endif
-/* If using gl3.h */
+
 /* Ensure we are using opengl's core profile only */
 #define GL3_PROTOTYPES 1
 #include <GL/glew.h>
@@ -28,117 +28,12 @@
 #include "open-simplex-noise.h"
 #include "world.h"
 #include "entity.h"
+#include "longpos.h"
 
-#define NUMVERT 36
 
-extern long player_chunk_offset[2];
+extern struct longpos player_lpos;
 float looked_at[3];
 
-// An array of 3 vectors which represents 3 vertices
-static const GLfloat g_vertex_buffer_data[] = {
-	-1, -1, 1, /* cube front lower */
-	1, -1, 1,
-	1, 1, 1,
-
-	-1, -1, 1, /* cube front upper */
-	1, 1, 1,
-	-1, 1, 1,
-
-	1, -1, 1, /* cube right lower */
-	1, -1, -1,
-	1, 1, -1,
-
-	1, -1, 1, /* cube right upper */
-	1, 1, -1,
-	1, 1, 1,
-
-	1, -1, -1, /* cube back lower */
-	-1, -1, -1,
-	-1, 1, -1,
-
-	1, -1, -1, /* cube back upper */
-	-1, 1, -1,
-	1, 1, -1,
-
-	-1, -1, -1, /* cube left lower */
-	-1, -1, 1,
-	-1, 1, 1,
-
-	-1, -1, -1, /* cube left upper */
-	-1, 1, 1,
-	-1, 1, -1,
-
-	-1, 1, 1, /* cube top front */
-	1, 1, 1,
-	1, 1, -1,
-
-	-1, 1, 1, /* cube top back */
-	1, 1, -1,
-	-1, 1, -1,
-
-	1, -1, 1, /* cube bottom front */
-	-1, -1, 1,
-	-1, -1, -1,
-
-	1, -1, 1, /* cube bottom back */
-	-1, -1, -1,
-	1, -1, -1,
-};
-
-static const GLfloat g_uv_buffer_data[] = {
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1,
-
-
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1,
-
-
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1,
-
-
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1,
-
-
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1,
-
-
-	0, 0,
-	1, 0,
-	1, 1,
-
-	0, 0,
-	1, 1,
-	0, 1
-};
 
 static const GLfloat block_outline_data[] = {
 	1.0f, 1.0f, 1.0f,
@@ -188,7 +83,6 @@ static GLfloat model_scale = /*0.50*/1.0f;
 static GLfloat model_rotation_angle = 0.0;
 static float model_rotation_axis[3] = {1, 0, 0};
 static float model_position[3] = {0.0, 0.0, 0.0};
-static float camera_position[3] = {4.0, 3.0, 3.0};
 static float camera_center[3] = {0.0, 0.0, 0.0};
 static float up_vector[3] = {0.0, 1.0, 0.0};
 static float fovDeg = 45.0;
@@ -288,7 +182,7 @@ void render_init()
 
 	/* start with a background color */
 	glClearColor( 0.6, 0.8, 1.0, 1.0 ); /* ungefähr himmelblau*/
-	glClear ( GL_COLOR_BUFFER_BIT );
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	/* create vao */
 	glGenVertexArrays(1, &VertexArrayID);
@@ -331,7 +225,7 @@ void update_mesh(int x, int z) {
 			);
 }
 
-void update_mesh_abs(int x, int z) {
+void update_mesh_abs(long x, long z) {
 	//SDL_Log("Updating mesh of chunk absolute: %i|%i, relative: %i|%i", x, z, x-meshindices_base_offset[0], z-meshindices_base_offset[1]);
 	meshes[meshindices[x-meshindices_base_offset[0]][z-meshindices_base_offset[1]]].num_triangles = generate_mescha(
 			world(x, z), 
@@ -393,18 +287,13 @@ void update_model()
 void update_view()
 {
 	float help0[4][4] = {};
-	get_player_pos(camera_position);
 	get_player_ori(camera_center);
 	get_player_right(help0);
 	vec3_cross(help0, camera_center, up_vector);
 
-	/*camera_position[0] = 0;
-	camera_position[1] = 0;
-	camera_position[2] = 0;*/
+	vec3_add(camera_center, player_lpos.rpos, camera_center);
 
-	vec3_add(camera_center, camera_position, camera_center);
-
-	lookAtRH(camera_position, camera_center, up_vector, view); /*now we should have a view matrix*/
+	lookAtRH(player_lpos.rpos, camera_center, up_vector, view); /*now we should have a view matrix*/
 }
 
 void update_projection()
@@ -414,24 +303,23 @@ void update_projection()
 
 void render_looper()
 {
-	int x1 = 0, y1 = 0, z1 = 0;
 	int i;
 	float playerpos[3];
 	static long last_player_chunk_offset[2] = {0, 0};
-	long curr_player_chunk_offset[2];
 
-	get_player_pos(playerpos);
-	/*see if player changed chunk. if so change the displayed chunks*/
-	curr_player_chunk_offset[0] = (long)floor(playerpos[0] / CHUNK_LIM_HOR);
-	curr_player_chunk_offset[1] = (long)floor(playerpos[2] / CHUNK_LIM_HOR);
-	if((curr_player_chunk_offset[0] != last_player_chunk_offset[0]) || (curr_player_chunk_offset[1] != last_player_chunk_offset[1])) {
+	if((player_lpos.chunk[0] != last_player_chunk_offset[0]) || (player_lpos.chunk[1] != last_player_chunk_offset[1])) {
 		/*TODO this should really be done in an asynchronous way to prevent fps drops*/
 		/*player changed chunk*/
 		long new_meshindices_base_offset[2];
 		long offsetchange[2];
 		unsigned short new_meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
-		new_meshindices_base_offset[0] = curr_player_chunk_offset[0] - CHUNK_LOADING_RANGE + 1;
-		new_meshindices_base_offset[1] = curr_player_chunk_offset[1] - CHUNK_LOADING_RANGE + 1;
+
+		SDL_Log("Changed chunk: player: %f|%f, player_chunk: %i|%i, base_offset: %i|%i",
+			       playerpos[0], playerpos[2], player_lpos.chunk[0], player_lpos.chunk[1],
+			       meshindices_base_offset[0], meshindices_base_offset[1]);
+
+		new_meshindices_base_offset[0] = player_lpos.chunk[0] - CHUNK_LOADING_RANGE + 1;
+		new_meshindices_base_offset[1] = player_lpos.chunk[1] - CHUNK_LOADING_RANGE + 1;
 
 		offsetchange[0] = new_meshindices_base_offset[0] - meshindices_base_offset[0];
 		offsetchange[1] = new_meshindices_base_offset[1] - meshindices_base_offset[1];
@@ -473,9 +361,8 @@ void render_looper()
 		meshindices_base_offset[0] = new_meshindices_base_offset[0];
 		meshindices_base_offset[1] = new_meshindices_base_offset[1];
 
-		last_player_chunk_offset[0] = curr_player_chunk_offset[0];
-		last_player_chunk_offset[1] = curr_player_chunk_offset[1];
-		SDL_Log("Changed chunk: player: %f|%f, player_chunk: %i|%i, base_offset: %i|%i", playerpos[0], playerpos[2], curr_player_chunk_offset[0], curr_player_chunk_offset[1], meshindices_base_offset[0], meshindices_base_offset[1]);
+		last_player_chunk_offset[0] = player_lpos.chunk[0];
+		last_player_chunk_offset[1] = player_lpos.chunk[1];
 	}
 
 	glUseProgram(programID);
@@ -510,11 +397,11 @@ void render_looper()
 					0, 
 					(void*)0 
 					);
-			model_position[0] = x1 /*- playerpos[0]*/ + CHUNK_LIM_HOR * model_scale * 
-				(x+meshindices_base_offset[0] - player_chunk_offset[0]);
-			model_position[1] = y1 /*- playerpos[1]*/;
-			model_position[2] = z1 /*- playerpos[2]*/ + CHUNK_LIM_HOR * model_scale *
-				(z+meshindices_base_offset[1] - player_chunk_offset[1]);
+			model_position[0] = CHUNK_LIM_HOR * model_scale * 
+				(x + meshindices_base_offset[0] - player_lpos.chunk[0]);
+			model_position[1] = 0;
+			model_position[2] = CHUNK_LIM_HOR * model_scale *
+				(z + meshindices_base_offset[1] - player_lpos.chunk[1]);
 			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
 
 			update_model();
