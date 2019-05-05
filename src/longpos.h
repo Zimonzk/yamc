@@ -5,8 +5,8 @@
 #include <math.h>
 
 struct longpos {
-	long chunk [2]; /*x and z number of the chunk this position refers to*/	
-	double rpos[3]; /*x, y and z coordinates of the position
+	long chunk[2]; /*x and z number of the chunk this position refers to*/	
+	float rpos[3]; /*x, y and z coordinates of the position
 			 *relative to the chunk*/
 };
 

@@ -34,22 +34,27 @@ void move_player(Uint32 difftime)
 	if(ks.DOWN || ks.UP) {
 		/*X chunk changing*/
 		if(player_lpos.rpos[0] > (double) CHUNK_LIM_HOR) {
+			SDL_Log("Player changed chunk X+");
 			player_lpos.rpos[0] -= (double) CHUNK_LIM_HOR;
 			player_lpos.chunk[0]++;
 		} else if(player_lpos.rpos[0] < 0) {
+			SDL_Log("Player changed chunk X-");
 			player_lpos.rpos[0] += (double) CHUNK_LIM_HOR;
 			player_lpos.chunk[0]--;
 		}
 		/*Z chunk changing*/
 		if(player_lpos.rpos[2] > (double) CHUNK_LIM_HOR) {
+			SDL_Log("Player changed chunk Z+");
 			player_lpos.rpos[2] -= (double) CHUNK_LIM_HOR;
 			player_lpos.chunk[1]++;
 		} else if(player_lpos.rpos[2] < 0) {
+			SDL_Log("Player changed chunk Z-");
 			player_lpos.rpos[2] += (double) CHUNK_LIM_HOR;
 			player_lpos.chunk[1]--;
 		}
 		/*WARNING this implies that a player never moves more than a chunk per movement calculation*/	
 	}
+	//SDL_Log("Players new rpos: %lf|%lf|%lf", player_lpos.rpos[0], player_lpos.rpos[1], player_lpos.rpos[2]); 
 }
 
 void player_turn(SDL_MouseMotionEvent* event)
