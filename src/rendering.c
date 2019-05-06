@@ -290,17 +290,17 @@ void update_view()
 {
 	float help0[3] = {};
 	get_player_ori(camera_center);
-	SDL_Log("Camera center: %f|%f|%f", camera_center[0], camera_center[1], camera_center[2]); 
+	//SDL_Log("Camera center: %f|%f|%f", camera_center[0], camera_center[1], camera_center[2]); 
 	get_player_right(help0);
-	SDL_Log("Player right: %f|%f|%f", help0[0], help0[1], help0[2]);
+	//SDL_Log("Player right: %f|%f|%f", help0[0], help0[1], help0[2]);
 	//vec3_cross(help0, camera_center, up_vector);
 
 	vec3_add(camera_center, player_lpos.rpos, camera_center);
-	SDL_Log("Player rpos: %f|%f|%f", player_lpos.rpos[0], player_lpos.rpos[1], player_lpos.rpos[2]);
+	//SDL_Log("Player rpos: %f|%f|%f", player_lpos.rpos[0], player_lpos.rpos[1], player_lpos.rpos[2]);
 
 	lookAtRH(player_lpos.rpos, camera_center, up_vector, view); /*now we should have a view matrix*/
-	SDL_Log("View matrix updated:");
-	print_mat4(view);
+	//SDL_Log("View matrix updated:");
+	//print_mat4(view);
 }
 
 void update_projection()
@@ -443,7 +443,8 @@ void render_looper()
 		vresult[1] *= 1.0f / vresult[3];
 		vresult[2] *= 1.0f / vresult[3];
 		vresult[3] = 1.0f;
-		vec3_add(vresult, player_lpos.rpos, looked_at);
+		//vec3_add(vresult, player_lpos.rpos, looked_at);
+		memcpy(looked_at, vresult, 3 * sizeof(float));
 		/*TODO: add check if values are inside a loaded chunk at all
 		 * also add calculation of the actual chunk and not just 0/0 */
 		int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
@@ -492,9 +493,9 @@ void render_looper()
 			(void*)0            // array buffer offset
 			);
 
-	model_position[0] = (int)floor(looked_at[0]) - player_lpos.rpos[0];
-	model_position[1] = (int)looked_at[1] - player_lpos.rpos[1];
-	model_position[2] = (int)floor(looked_at[2]) - player_lpos.rpos[2];
+	model_position[0] = (int)floor(looked_at[0])/* - player_lpos.rpos[0]*/;
+	model_position[1] = (int)looked_at[1]/* - player_lpos.rpos[1]*/;
+	model_position[2] = (int)floor(looked_at[2])/* - player_lpos.rpos[2]*/;
 
 	//SDL_Log("Postion for outline updated: %f|%f|%f", model_position[0], model_position[1], model_position[2]); 
 
