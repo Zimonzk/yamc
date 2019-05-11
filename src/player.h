@@ -3,6 +3,8 @@
 
 #include <SDL2/SDL.h>
 
+#define PLAYER_REACH 5.0f
+
 void move_player(Uint32 difftime);
 
 void get_player_pos(float* out);
