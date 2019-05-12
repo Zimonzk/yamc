@@ -59,15 +59,16 @@ void move_player(Uint32 difftime)
 
 void player_turn(SDL_MouseMotionEvent* event)
 {
+	float new_pitch = player_pitch_rad - event->yrel * player_pitching_speed;
 	player_yaw_rad -= event->xrel * player_yawing_speed;
 	if(player_yaw_rad > (2.0 * (float) M_PI)) {
 		player_yaw_rad = player_yaw_rad - (2.0 * (float) M_PI);
 	} else if(player_yaw_rad < (-2.0 * (float) M_PI)) {
 		player_yaw_rad = player_yaw_rad + (2.0 * (float) M_PI);
 	}
-	if((player_pitch_rad < 0.5 * (float) M_PI) && (event-> yrel < 0.0) ||
-			(player_pitch_rad > -0.5 * (float) M_PI) && (event-> yrel > 0.0)) {
-		player_pitch_rad -= event->yrel * player_pitching_speed;
+	if(((new_pitch < 0.5 * (float) M_PI) && (event-> yrel < 0.0)) ||
+			((new_pitch > -0.5 * (float) M_PI) && (event-> yrel > 0.0))) {
+		player_pitch_rad = new_pitch;
 	}
 	//SDL_Log("YAW: %f, PITCH %f", player_yaw_rad, player_pitch_rad);
 }

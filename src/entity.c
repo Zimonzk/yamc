@@ -23,13 +23,13 @@ static void sdldie(const char *msg)
 
 
 static const GLfloat square2Din3D_data[] = {
-	-0.5, -0.5, 0.0,
-	0.5, -0.5, 0.0, 
-	0.5, 0.5, 0.0,
+	-0.5, 0.0, 0.0,
+	0.5, 0.0, 0.0, 
+	0.5, 1.0, 0.0,
 
-	-0.5, -0.5, 0.0,
-	0.5, 0.5, 0.0,
-	-0.5, 0.5, 0.0
+	-0.5, 0.0, 0.0,
+	0.5, 1.0, 0.0,
+	-0.5, 1.0, 0.0
 };
 
 static GLuint vertexbuffer_billboard;
@@ -78,7 +78,7 @@ void render_entities(float view[4][4], float projection[4][4])
 	float vp[4][4];
 	mult_mat4_mat4(projection, view, vp);
 
-	glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
 
 	//SDL_Log("RENDER ENTITIES!");
 
@@ -94,7 +94,7 @@ void render_entities(float view[4][4], float projection[4][4])
 				glUseProgram(programID_billboard);
 				glActiveTexture(GL_TEXTURE0);
 				glUniform1i(billboard_uniformID_sampler, 0);
-				glDisable(GL_BLEND);
+				//glDisable(GL_BLEND);
 				glUniformMatrix4fv(
 						billboard_uniformID_VP,
 						1,
@@ -149,9 +149,9 @@ void render_entities(float view[4][4], float projection[4][4])
 							0,                  // stride
 							(void*)0            // array buffer offset
 							);
-					glDisable(GL_CULL_FACE);
+					//glDisable(GL_CULL_FACE);
 					glDrawArrays(GL_TRIANGLES, 0, 6);
-					glEnable(GL_CULL_FACE);
+					//glEnable(GL_CULL_FACE);
 					glDisableVertexAttribArray(0);
 					break;
 				case RENDER_BLOCK:

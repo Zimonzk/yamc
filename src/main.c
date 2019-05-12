@@ -114,13 +114,13 @@ int main(int argc, char *argv[])
 		struct entity_index_card *eic;
 		struct live_entity *lep;
 		long chunk[2] = {0, 0};
-		double pos[3] = {20.0, 20.0, 20.0};
+		double pos[3] = {20.0, 12.0, 20.0};
 
 		card.name = strdup("zimonzk.test");
 		card.displayname = strdup("TEST");
 		card.health = -1;
 		card.rt = RENDER_SPRITE;
-		card.em.sp.size = 0.25f;
+		card.em.sp.size = 0.5f;
 		card.em.sp.textureID = texture_from_png("textures/blocks/stone.png");
 		if(card.em.sp.textureID == 0) {
 			sdldie("no texture for entity");
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 						chunk* mchunk = world(lpos.chunk[0], lpos.chunk[1]);
 						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].id = 0;
 						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
-						/* TODO check if the chunk is loaded (has mesh)*/
+						/* TODO check if the chunk is loaded (has mesh) */
 						update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
 						SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
 						SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));

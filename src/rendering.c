@@ -420,14 +420,11 @@ void render_looper()
 			//single texture
 			glUniform1i(textureSamplerID, 0);
 			glDrawArrays(GL_TRIANGLES, 0, 3*meshes[meshindices[x][z]].num_triangles);
-
+			
 			glDisableVertexAttribArray(0);
 			glDisableVertexAttribArray(2);
 		}
 	}
-
-	/* entity rendering */
-	render_entities(view, projection);
 
 	/*block picking*/
 	if(inreach = pick_block(looked_at)) {
@@ -459,9 +456,11 @@ void render_looper()
 		glDrawArrays(GL_LINES, 8, 8);
 
 		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(2);
-
 	}
+	
+	/* entity rendering */
+	render_entities(view, projection);
+
 
 	/*gui rendering*/
 	glUseProgram(programID_gui);
