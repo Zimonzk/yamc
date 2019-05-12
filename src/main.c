@@ -31,6 +31,7 @@
 #include "player.h"
 #include "world.h"
 #include "entity.h"
+#include "longpos.h"
 
 #define NUMVERT 36
 
@@ -47,7 +48,11 @@ void sdldie(const char *msg)
 
 
 chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
+
+extern struct longpos player_lpos;
 extern float looked_at[3];
+extern char inreach;
+
 
 /* Our program's entry point */
 int main(int argc, char *argv[])
@@ -145,18 +150,18 @@ int main(int argc, char *argv[])
 					handle_mousemotion_event(&event);
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					{
-						int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
-						int cz = (int)floor(looked_at[2]/CHUNK_LIM_HOR);
-						int crx = ((((int)floor(looked_at[0])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
-						int crz = ((((int)floor(looked_at[2])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
-						chunk* mchunk = world(cx, cz);
-						mchunk->data[crx][(int)looked_at[1]][crz].id = 0;
-						mchunk->data[crx][(int)looked_at[1]][crz].properties = 0;
+					if(inreach) {
+						struct longpos lpos;
+						rrpos_to_lpos(looked_at, player_lpos, lpos);
+						chunk* mchunk = world(lpos.chunk[0], lpos.chunk[1]);
+						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].id = 0;
+						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
 						/* TODO check if the chunk is loaded (has mesh)*/
-						update_mesh_abs(cx, cz);
+						update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
 						SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
 						SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
+					} else {
+						SDL_Log("Not looking at a block in reach.");
 					}
 					break;
 				default:

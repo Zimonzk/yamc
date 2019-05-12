@@ -36,6 +36,7 @@
 
 extern struct longpos player_lpos;
 float looked_at[3];
+char inreach = 0;
 
 
 static const GLfloat block_outline_data[] = {
@@ -429,7 +430,7 @@ void render_looper()
 	render_entities(view, projection);
 
 	/*block picking*/
-	if(pick_block(looked_at)) {
+	if(inreach = pick_block(looked_at)) {
 		/*selected block outline*/
 		glUseProgram(programID_outline);
 		glDisable(GL_DEPTH_TEST);
