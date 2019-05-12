@@ -444,9 +444,7 @@ void render_looper()
 				(void*)0            // array buffer offset
 				);
 
-		model_position[0] = (int)floor(looked_at[0])/* - player_lpos.rpos[0]*/;
-		model_position[1] = (int)looked_at[1]/* - player_lpos.rpos[1]*/;
-		model_position[2] = (int)floor(looked_at[2])/* - player_lpos.rpos[2]*/;
+		memcpy(model_position, looked_at, 3 * sizeof(float));
 
 		//SDL_Log("Postion for outline updated: %f|%f|%f", model_position[0], model_position[1], model_position[2]); 
 
@@ -492,14 +490,14 @@ void render_looper()
 	glEnable(GL_DEPTH_TEST);
 }
 
-int pick_block(float *rpos)
+int pick_block(float *rrpos)
 {
-	/* TODO Extract routine into a function
-	 * which can pick blocks */
 	GLfloat depth;
 	float zLinear;
 	float mhelp0[4][4] = {}, mhelp1[4][4] = {};
 	float vcenter[4] = {0.0f, 0.0f, 0.0f, 1.0f}, vresult[4] = {};
+	struct longpos lpos;
+	unsigned int block[3];
 	glReadPixels(320,  240,  1,  1,  GL_DEPTH_COMPONENT,  GL_FLOAT,  &depth);
 	//SDL_Log("Depth: %f", depth);
 	vcenter[2] = 2.0f * depth - 1.0f;
@@ -516,39 +514,36 @@ int pick_block(float *rpos)
 	vresult[1] *= 1.0f / vresult[3];
 	vresult[2] *= 1.0f / vresult[3];
 	vresult[3] = 1.0f;
-	//vec3_add(vresult, player_lpos.rpos, looked_at);
-	memcpy(looked_at, vresult, 3 * sizeof(float));
-	/*TODO: add check if values are inside a loaded chunk at all
-	 * also add calculation of the actual chunk and not just 0/0 */
-	int cx = (int)floor(looked_at[0]/CHUNK_LIM_HOR);
-	int cz = (int)floor(looked_at[2]/CHUNK_LIM_HOR);
-	int crx = ((((int)floor(looked_at[0])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
-	int crz = ((((int)floor(looked_at[2])) % CHUNK_LIM_HOR) + CHUNK_LIM_HOR) % CHUNK_LIM_HOR;
+
+	rrpos_to_lpos(vresult, player_lpos, lpos); /* this is necessary in order to access the actual world data */
 	//SDL_Log("in chunk: %i|%i", cx, cz);
-	if((((cx - meshindices_base_offset[0]) >= 0) && ((cx - meshindices_base_offset[0]) < (2*CHUNK_LOADING_RANGE-1))) && (((cz - meshindices_base_offset[1]) >= 0) && ((cz - meshindices_base_offset[1]) < (2*CHUNK_LOADING_RANGE-1))) && (((int)looked_at[1]  >= 0) && ((int)looked_at[1] < CHUNK_LIM_VER))) {
-		if(world(cx, cz)->data[crx][(int)looked_at[1]][crz].id == 0) {
-			//find the side of the block we appear to be looking at
-			GLfloat over[3];
-			char inversion[3] = {0, 0, 0};
-			GLfloat vsmallest;
-			char nsmallest = 0;
-			for(int n = 0; n < 3; n++) {
-				over[n] = looked_at[n] - (int) floor(looked_at[n]);
-				if(over[n] > 0.5f) {
-					inversion[n] = 1;
-					over[n] = 1.0f - over[n];
-				}
+
+	if(world(lpos.chunk[0], lpos.chunk[1])->data[(int)floor(lpos.rpos[0])][(int)lpos.rpos[1]][(int)floor(lpos.rpos[2])].id == 0) {
+		//find the side of the block we appear to be looking at
+		GLfloat over[3];
+		char inversion[3] = {0, 0, 0};
+		GLfloat vsmallest;
+		char nsmallest = 0;
+		for(int n = 0; n < 3; n++) {
+			over[n] = vresult[n] - (int) floor(vresult[n]);
+			if(over[n] > 0.5f) {
+				inversion[n] = 1;
+				over[n] = 1.0f - over[n];
 			}
-			vsmallest = over[0];
-			for(int n = 1; n < 3; n++) {
-				if(over[n] < vsmallest) {
-					vsmallest = over[n];
-					nsmallest = n;
-				}
-			}
-			looked_at[nsmallest] = ((int)floor(looked_at[nsmallest])) + (2.0f * inversion[nsmallest] - 1.0f);
 		}
+		vsmallest = over[0];
+		for(int n = 1; n < 3; n++) {
+			if(over[n] < vsmallest) {
+				vsmallest = over[n];
+				nsmallest = n;
+			}
+		}
+		vresult[nsmallest] = ((int)floor(vresult[nsmallest])) + (2.0f * inversion[nsmallest] - 1.0f);
 	}
-	//SDL_Log("Calculated coordinates: %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+	vresult[0] = (int)floor(vresult[0]);
+	vresult[1] = (int)vresult[1];
+	vresult[2] = (int)floor(vresult[2]);
+
+	memcpy(rrpos, vresult, 3 * sizeof(float));
 }
 

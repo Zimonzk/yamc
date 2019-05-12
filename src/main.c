@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 		card.displayname = strdup("TEST");
 		card.health = -1;
 		card.rt = RENDER_SPRITE;
-		card.em.sp.size = 20.0f;
+		card.em.sp.size = 0.25f;
 		card.em.sp.textureID = texture_from_png("textures/blocks/stone.png");
 		if(card.em.sp.textureID == 0) {
 			sdldie("no texture for entity");
