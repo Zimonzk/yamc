@@ -43,7 +43,8 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	// Compile Vertex Shader
 	SDL_Log("Compiling shader : %s\n", vertex_file_path);
 	char const * VertexSourcePointer = vss.data;
-	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
+	const int VertexShaderLength = vss.used_units;
+	glShaderSource(VertexShaderID, 1, &VertexSourcePointer, &VertexShaderLength);
 	glCompileShader(VertexShaderID);
 
 	// Check Vertex Shader
@@ -73,7 +74,8 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	// Compile Fragment Shader
 	SDL_Log("Compiling shader : %s\n", fragment_file_path);
 	char const * FragmentSourcePointer = fss.data;
-	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
+	const int FragmentShaderLength = fss.used_units;
+	glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , &FragmentShaderLength);
 	glCompileShader(FragmentShaderID);
 
 	// Check Vertex Shader
