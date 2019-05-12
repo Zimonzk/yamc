@@ -1,0 +1,18 @@
+Since yamc is intended to support extremely large worlds there needs to be a
+system to have acurate positions independent of the position on the world.
+To gurantee this the typical "world coordinates" usen in opengl are not actual
+coordinates refering to the absolute position in the world. Instead they are called
+"rrpos" (Rendering Relative POSition) and are relative to the originof the
+chunk in which the player currently is. These of cours need to be updated when the
+player changes chunk.
+Still ther needs to be a way to refer to an absolute position in the world.
+This is done using "longpos" (LONG POSiton) or short (to use in variable
+names) "lpos" coordinates, which consist of an "rpos" (Relative POSition)
+element, similar to the rrpos coordinates and a "chunk" element which refers
+to the chunks X and Z coordinates with the type long.
+Tehr rpos now means the position relative th the chunks origin which is
+specified in chunk.
+The "chunk coordinates" in chunk are long integers where a step of 1 means one
+chunk more so to calculate the number of blocks it must be muiltiplied with
+the number of blocks alng a side of a chunk specified in the constant
+"CHUNK_LIM_HOR".
