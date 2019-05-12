@@ -1,5 +1,4 @@
 #version 330 core
-#extension GL_ARB_shading_language_420pack: require
 
 // Input vertex data, different for all executions of this shader.
 layout(location = 0) in vec3 vertexPosition;
@@ -14,7 +13,7 @@ uniform mat4 VP;
 
 void main() {
   int c = gl_VertexID % 6;
-  vec3 up = {0.0f, 1.0f, 0.0f};
+  vec3 up = vec3(0.0f, 1.0f, 0.0f);
   vec3 vertexPosition_worldspace = position
     + CameraRight_worldspace * vertexPosition.x * scale
     + up * vertexPosition.y * scale;
