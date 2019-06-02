@@ -1,4 +1,6 @@
-#include <zimonzk/lists.h>
+#include <stdio.h>
+
+#include "zimonzk/lists.h"
 
 #define GL3_PROTOTYPES 1
 #include <GL/glew.h>

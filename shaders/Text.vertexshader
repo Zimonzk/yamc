@@ -1,0 +1,15 @@
+#version 330 core
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec2 vertexPosition;
+  
+// Values that stay constant for the whole mesh.
+uniform vec2 screen_dimens;
+uniform vec2 start;
+  
+void main() {
+  vec2 scaledPosition = ((start + vertexPosition)/screen_dimens);
+
+  gl_Position = vec4(scaledPosition, 0, 1);
+}
+

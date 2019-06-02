@@ -32,6 +32,7 @@
 #include "world.h"
 #include "entity.h"
 #include "longpos.h"
+#include "fonter.h"
 
 #define NUMVERT 36
 
@@ -99,6 +100,8 @@ int main(int argc, char *argv[])
 	/* init glew */
 	glewExperimental = GL_TRUE;
 	glewInit();
+
+	initfont();
 
 	/* load some block textures to texture our block with */
 	side_texi = load_block_texture("textures/blocks/side.png");
