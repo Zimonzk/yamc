@@ -190,4 +190,94 @@ GLuint texture_from_png(char *png_path)
 	return textureID;
 }
 
+/* make a grayscale 8 bit bitmap from a png file
+ * the returned buffer must be freed by the caller */
+unsigned char *grayscale_from_png(const char *png_path, int *width, int *height)
+{
+	int channels, bit_depth, color_type;
+	unsigned char* imagedata;
+	FILE *fp;
+	png_structp png_ptr;
+	png_infop info_ptr;
+	unsigned char **rows = 0;
 
+	
+	fp = fopen(png_path, "rb");
+	if(fp == NULL) {
+		SDL_Log("Can't open %s", png_path);
+		return 0;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+	if (png_ptr == NULL) {
+		fclose(fp);
+		return 0;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL)
+	{
+		fclose(fp);
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		return 0;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr)))
+	{
+		SDL_Log("PNG read error");
+		/* Free all of the memory associated with the png_ptr and info_ptr. */
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return 0;
+	}
+
+	png_init_io(png_ptr, fp);
+
+	png_read_info(png_ptr, info_ptr);
+
+	bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+	channels = png_get_channels(png_ptr, info_ptr);
+	color_type = png_get_color_type(png_ptr, info_ptr);
+	*width = png_get_image_width(png_ptr, info_ptr);
+	*height = png_get_image_height(png_ptr, info_ptr);	
+
+
+	// Read any color_type into 8bit depth, RGBA format.
+	// See http://www.libpng.org/pub/png/libpng-manual.txt
+
+	if(bit_depth == 16)
+		png_set_strip_16(png_ptr);
+
+	// PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
+	if(color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+		png_set_expand_gray_1_2_4_to_8(png_ptr);
+
+	if(color_type != PNG_COLOR_TYPE_GRAY) {
+		SDL_Log("Error: PNG is not a grayscale.");
+		return 0;
+	}
+
+	png_read_update_info(png_ptr, info_ptr);
+
+	channels = png_get_channels(png_ptr, info_ptr);
+	if(channels != 1) {
+		SDL_Log("Error: Grayscale has more than 1 channel");
+	}
+	SDL_Log("W%iH%iC%iD%i", *width, *height, channels, bit_depth);
+
+	imagedata = calloc(*width * *height * channels, 1);
+	rows = calloc(*height, sizeof(char *));
+	for(int i = 0; i < *height; i++) {
+		rows[i] = imagedata + (*height - 1 - i) * *width * channels;
+	}
+
+	png_read_image(png_ptr, rows);
+
+	imagedata[128*8*4+8*8] = 0;
+
+	/* Clean up after the read, and free any memory allocated.  REQUIRED. */
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	fclose(fp);
+	
+	return imagedata;
+}

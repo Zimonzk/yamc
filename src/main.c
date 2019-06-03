@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
 	Uint32 fpsticks = 0, fpslastticks = 0;
 	float fps = 0;
 	long frame_num = 0;
+	char fpsstr[64];
 
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
@@ -101,8 +102,6 @@ int main(int argc, char *argv[])
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	initfont();
-
 	/* load some block textures to texture our block with */
 	side_texi = load_block_texture("textures/blocks/side.png");
 	top_texi = load_block_texture("textures/blocks/top.png");
@@ -111,6 +110,7 @@ int main(int argc, char *argv[])
 
 	render_init();
 	init_entities();
+	initfont();
 
 	{
 		struct entity_index_card card;
@@ -176,6 +176,12 @@ int main(int argc, char *argv[])
 
 		render_looper();
 
+		render_text("Hello world!", 0.0f, 0.0f);
+		fps = 1000.0f/difftime;
+		snprintf(fpsstr, 64, "%.4f FPS", fps);
+		render_text(fpsstr, -1.0f, 1.0f - (32.0f/480.0f));
+
+
 		/* buffer swap*/
 		SDL_GL_SwapWindow(mainwindow);
 		thisticks = SDL_GetTicks();
@@ -187,7 +193,7 @@ int main(int argc, char *argv[])
 			fps = 1000000.0/(fpsticks - fpslastticks);
 			SDL_Log("FPS: %f\n", fps);
 			fpslastticks = fpsticks;
-		}
+		}		
 		frame_num++;
 	}
 

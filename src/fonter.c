@@ -12,9 +12,13 @@
 #include <GL/gl.h>
 #endif
 
+#include <SDL2/SDL.h>
+
 
 #include "fonter.h"
 #include "zimonzk/lists.h"
+#include "texture.h"
+#include "shader.h"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -25,147 +29,166 @@ static GLuint programID_font;
 
 static GLuint textureSamplerID_text;
 static GLuint uniformID_textcolor;
-static GLuint uniformID_screen_dimens;
-static GLuint uniformid_start;
+static GLuint uniformID_size;
+static GLuint uniformID_start;
 
 int initfont()
 {
-	FILE *fontfile = 0;
-	arraylist fontdata;
-	unsigned char font_bitmap[512*512];
-	stbtt_bakedchar cdata[1024];
-	int c;
+	unsigned char* font_bitmap;
+	int width, height;
 
-	arraylist_init(&fontdata, 1, 1024);
-
-	fontfile = fopen("fonts/OpenSans-Regular.ttf", "rb");
-	if(fontfile == 0) {
+	/*png read*/
+	font_bitmap = grayscale_from_png("fonts/Latin-1-atlas.png"/*"fonts/TEST.png"*/, &width, &height);
+	if(font_bitmap == 0) {
+		SDL_Log("Error: Could not load font atlas.");
 		return -1;
 	}
 
-	while(1) {
-		c = fgetc(fontfile);
-		if(c == EOF) {
-			break;
-		}
-		arraylist_append(&fontdata, (unsigned char *)&c);
-	}
-
-	if(stbtt_BakeFontBitmap(fontdata.data, 0, 24.0, font_bitmap, 512, 512, 32, 1024, cdata) < 0) {
+	if((width != height) || (width % 16 != 0)) {
+		SDL_Log("Error: Texture atlas has wrong format. Please provide an image with the same height as width which are a multiple of 16.");
 		return -2;
 	}
-
-	arraylist_delete(&fontdata);
+	//SDL_Log("DDDD %i %i", width, height);
 
 	/* put bitmap into opengl texture */
 	glGenTextures(1, &textureID_font);
 	glBindTexture(GL_TEXTURE_2D, textureID_font);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512, 512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, font_bitmap);
-	// can free temp_bitmap at this point
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, font_bitmap);	
+	free(font_bitmap);
 
+	//textureID_font = texture_from_png("textures/blocks/stone.png");
+	//glBindTexture(GL_TEXTURE_2D, textureID_font);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	
 	glGenBuffers(1, &vb_text);
 
-	programID_font = LoadShaders("shaders/text.vertexshader", "shaders/text.fragmentshader");
+	programID_font = LoadShaders("shaders/Text.vertexshader", "shaders/Text.fragmentshader");
+	if(programID_font == 0) {
+		SDL_Log("Problem loading text shaders.");
+		return -3;
+	}
 	textureSamplerID_text = glGetUniformLocation(programID_font, "my_sampler");
 	uniformID_textcolor = glGetUniformLocation(programID_font, "textcolor");
-	uniformID_screen_dimens = glGetUniformLocation(programID_font, "screen_dimens");
+	uniformID_size = glGetUniformLocation(programID_font, "size");
 	uniformID_start = glGetUniformLocation(programID_font, "start");
-
-
-
-	{ /* png export fpr testing */
-		FILE *fp = fopen("fonts/atlasexport.png", "wb");
-		png_structp png_ptr = NULL;
-		png_infop info_ptr = NULL;
-		size_t x, y;
-		png_uint_32 bytes_per_row;
-		png_byte **row_pointers = NULL;
-
-		if (fp == NULL) return -1;
-
-		/* Initialize the write struct. */
-		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-		if (png_ptr == NULL) {
-			fclose(fp);
-			return -1;
-		}
-
-		/* Initialize the info struct. */
-		info_ptr = png_create_info_struct(png_ptr);
-		if (info_ptr == NULL) {
-			png_destroy_write_struct(&png_ptr, NULL);
-			fclose(fp);
-			return -1;
-		}
-
-		/* Set up error handling. */
-		if (setjmp(png_jmpbuf(png_ptr))) {
-			png_destroy_write_struct(&png_ptr, &info_ptr);
-			fclose(fp);
-			return -1;
-		}
-
-		/* Set image attributes. */
-		png_set_IHDR(png_ptr,
-				info_ptr,
-				512,
-				512,
-				8,
-				PNG_COLOR_TYPE_GRAY,
-				PNG_INTERLACE_NONE,
-				PNG_COMPRESSION_TYPE_DEFAULT,
-				PNG_FILTER_TYPE_DEFAULT);
-
-		/* Initialize rows of PNG. */
-		row_pointers = malloc(sizeof(unsigned char *) * 512);
-		for(int row = 0; row < 512; row++) {
-			row_pointers[row] = &font_bitmap[512 * row];
-		}
-
-		/* Actually write the image data. */
-		png_init_io(png_ptr, fp);
-		png_set_rows(png_ptr, info_ptr, row_pointers);
-		png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-
-		png_free(png_ptr, row_pointers);
-
-		/* Finish writing. */
-		png_destroy_write_struct(&png_ptr, &info_ptr);
-		fclose(fp);
-	}
 
 	return 0;
 }
 
-void render_text(char *utf8str, float x, float y) /* x, y openGL coordinates 
+void render_text(char *str, float x, float y) /* x, y openGL coordinates 
 						   * of where the first line starts. */
 {
-	glEnablaVertexAttribArray(0); /* this enables the vertex coordinates 
-				       * (location = 0) */
-	glVertexAttribPointer( /* this sets the settings for the vertex coordinates */
-			0,                  // attribute 0. Must match the layout in the shader.
-			2,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-			);
+	arraylist uv_temp;
+	arraylist_init(&uv_temp, sizeof(float), 2);
+	//SDL_Log("000");
+	//SDL_Log("%i", glGetError());
+	
+	glUseProgram(programID_font);
+	//SDL_Log("prog: %i", programID_font);
+	//SDL_Log("%i", glGetError());
 
-	glBindBuffer(GL_ARRAY_BUFFER, vb_text);
+	glEnableVertexAttribArray(0); /* this enables the vertex coordinates 
+				       * (location = 0) */
+	//SDL_Log("%i", glGetError());
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, textureID_text);
+	//SDL_Log("%i", glGetError());
+
+	glBindTexture(GL_TEXTURE_2D, textureID_font);
+	//SDL_Log("%i", glGetError());
 
 	glUniform1i(textureSamplerID_text, 0);
+	//SDL_Log("%i", glGetError());
+
 	glUniform2f(uniformID_start, x, y);
+	//SDL_Log("%i", glGetError());
+
 	glUniform4f(uniformID_textcolor, 1.0f, 1.0f, 1.0f, 1.0f);
-	glUniform2f(uniformID_screen_dimens, 640.0f, 480.0f);
+	//SDL_Log("%i", glGetError());
+
+	glUniform2f(uniformID_size, 32.0f/640.0f, 32.0f/480.0f);
+	//SDL_Log("%i", glGetError());
+
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
 	
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
 
-	for(c = *utfstr; 
+	//SDL_Log("%i, %i", GL_INVALID_OPERATION, GL_INVALID_VALUE);
+	//SDL_Log("0-%i", glGetError());
+
+
+	for(char c = *str; c != '\0'; c = *(++str)) {
+		float u, v;
+		//SDL_Log("%c", c);
+		u = c % 16;
+		v = c / 16;
+
+		u = u / 16.0f;
+		v = 1.0f - (v / 16.0f);
+
+		v -= 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+
+		u += 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+
+		v += 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+
+		u -= 1.0f/16.0f;
+		v -= 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+
+		u += 1.0f/16.0f;
+		v += 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+
+		u -= 1.0f/16.0f;
+
+		arraylist_append(&uv_temp, &u);
+		arraylist_append(&uv_temp, &v);
+	}
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, vb_text);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * uv_temp.used_units, uv_temp.data, GL_STREAM_DRAW);
+	//SDL_Log("%i", uv_temp.used_units);
+	
+	glVertexAttribPointer( /* this sets the settings for the vertex coordinates */
+		0,                  // attribute 0. Must match the layout in the shader.
+		2,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+		);
+	
+	//glVertexAttribDivisor(0, 6);
+
+	glDrawArrays(GL_TRIANGLES, 0, uv_temp.used_units / 2);
+
+	//SDL_Log("1-%i", glGetError());
+	
+	arraylist_delete(&uv_temp);
+
+	//glVertexAttribDivisor(0, 0);
+	glEnable(GL_DEPTH_TEST);
 }
