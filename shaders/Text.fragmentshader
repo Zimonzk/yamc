@@ -1,12 +1,12 @@
 #version 330 core
 
-layout(location=1) in vec2 UV;
-
-out vec4 color;
+in vec2 UV;
 
 uniform sampler2D my_sampler;
 uniform vec4 textcolor;
 
-void main(){
-  color = vec4(1, 1, 1, texture(my_sampler, UV).a) * textcolor;
+void main() {
+  gl_FragColor = vec4(1, 1, 1, texture(my_sampler, UV).r) * textcolor;
+  //gl_FragColor = vec4(UV, 0, 1);
+  //gl_FragColor = texture(my_sampler, UV);
 }

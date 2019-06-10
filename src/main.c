@@ -33,6 +33,7 @@
 #include "entity.h"
 #include "longpos.h"
 #include "fonter.h"
+#include "confconfig.h"
 
 #define NUMVERT 36
 
@@ -54,6 +55,11 @@ extern struct longpos player_lpos;
 extern float looked_at[3];
 extern char inreach;
 
+void ontestoption(char *value, void *userdata)
+{
+	SDL_Log("Testvalue = \"%s\"", value);
+}
+
 
 /* Our program's entry point */
 int main(int argc, char *argv[])
@@ -66,6 +72,8 @@ int main(int argc, char *argv[])
 	float fps = 0;
 	long frame_num = 0;
 	char fpsstr[64];
+
+	struct confstate confstate = {};
 
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
@@ -107,6 +115,11 @@ int main(int argc, char *argv[])
 	top_texi = load_block_texture("textures/blocks/top.png");
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
+
+	conf_register_key(&confstate, "testoption", ontestoption, NULL);
+	if(conf_parse_file(&confstate, "config/options.conf") == CONFCONFIG_ERROR_NOFILE) {
+		sdldie(1212);
+	}
 
 	render_init();
 	init_entities();
@@ -177,8 +190,7 @@ int main(int argc, char *argv[])
 		render_looper();
 
 		render_text("Hello world!", 0.0f, 0.0f);
-		fps = 1000.0f/difftime;
-		snprintf(fpsstr, 64, "%.4f FPS", fps);
+		snprintf(fpsstr, 64, "%.1f FPS", fps);
 		render_text(fpsstr, -1.0f, 1.0f - (32.0f/480.0f));
 
 
@@ -188,11 +200,11 @@ int main(int argc, char *argv[])
 		difftime = thisticks - lastticks;
 		lastticks = thisticks;
 
-		if(!(frame_num % 1000)) {
+		if(!(frame_num % 16)) {
 			fpsticks = SDL_GetTicks();
-			fps = 1000000.0/(fpsticks - fpslastticks);
-			SDL_Log("FPS: %f\n", fps);
+			fps = 16000.0/(fpsticks - fpslastticks);
 			fpslastticks = fpsticks;
+			//SDL_Log("%f", fps);
 		}		
 		frame_num++;
 	}
