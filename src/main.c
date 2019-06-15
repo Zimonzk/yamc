@@ -1,7 +1,5 @@
-/*
- * http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices
- *
- */
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -118,7 +116,7 @@ int main(int argc, char *argv[])
 
 	conf_register_key(&confstate, "testoption", ontestoption, NULL);
 	if(conf_parse_file(&confstate, "config/options.conf") == CONFCONFIG_ERROR_NOFILE) {
-		sdldie(1212);
+		sdldie("Invalid config file");
 	}
 
 	render_init();
@@ -163,22 +161,11 @@ int main(int argc, char *argv[])
 					stop = 1;
 					break;
 				case SDL_MOUSEMOTION:
-					handle_mousemotion_event(&event);
+					handle_mousemotion_event(&event.motion);
 					break;
 				case SDL_MOUSEBUTTONDOWN:
-					if(inreach) {
-						struct longpos lpos;
-						rrpos_to_lpos(looked_at, player_lpos, lpos);
-						chunk* mchunk = world(lpos.chunk[0], lpos.chunk[1]);
-						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].id = 0;
-						mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
-						/* TODO check if the chunk is loaded (has mesh) */
-						update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
-						SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
-						SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
-					} else {
-						SDL_Log("Not looking at a block in reach.");
-					}
+				case SDL_MOUSEBUTTONUP:
+					handle_mousebutton_event(&event.button);
 					break;
 				default:
 					break;

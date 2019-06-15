@@ -324,7 +324,7 @@ void render_looper()
 		long offsetchange[2];
 		unsigned short new_meshindices[2*CHUNK_LOADING_RANGE-1][2*CHUNK_LOADING_RANGE-1];
 
-		SDL_Log("Changed chunk: player: %f|%f, player_chunk: %i|%i, base_offset: %i|%i",
+		SDL_Log("Changed chunk: player: %f|%f, player_chunk: %ld|%ld, base_offset: %ld|%ld",
 				player_lpos.rpos[0], player_lpos.rpos[2], player_lpos.chunk[0], player_lpos.chunk[1],
 				meshindices_base_offset[0], meshindices_base_offset[1]);
 
@@ -352,7 +352,7 @@ void render_looper()
 							meshes[meshindices[x][z]].vertexbuffer,
 							meshes[meshindices[x][z]].texibuffer
 							);
-					SDL_Log(	"making new mesh at %i|%i into %i",
+					SDL_Log(	"making new mesh at %ld|%ld into %i",
 							2*(CHUNK_LOADING_RANGE - 1) - x + new_meshindices_base_offset[0],
 							2*(CHUNK_LOADING_RANGE - 1) - z + new_meshindices_base_offset[1],
 							meshindices[x][z]);
@@ -553,5 +553,7 @@ int pick_block(float *rrpos)
 	vresult[2] = (int)floor(vresult[2]);
 
 	memcpy(rrpos, vresult, 3 * sizeof(float));
+
+	return 1;
 }
 

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -I ./include -Wall -std=c99 -ggdb
+CFLAGS = -I ./include -Wformat -Wimplicit-function-declaration -Werror=implicit-function-declaration -Wreturn-type -Werror=return-type -std=c99 -ggdb
 ifeq ($(OS),Windows_NT)
 LDFLAGS = -L ./lib -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -llists -lpng -Wl,-subsystem,windows
 else

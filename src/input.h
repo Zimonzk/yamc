@@ -12,6 +12,8 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent);
 
 void handle_mousemotion_event(SDL_MouseMotionEvent* mvevent);
 
+void handle_mousebutton_event(SDL_MouseButtonEvent* bevent);
+
 struct keystates* get_keystates(void);
 
 #endif // INPUT_H_INCLUDED

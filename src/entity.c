@@ -1,6 +1,7 @@
 #include "entity.h"
 
 #include "matr.h"
+#include "shader.h"
 
 #include <string.h>
 
@@ -11,6 +12,8 @@
 #else
 #include <GL/gl.h>
 #endif
+
+#include <SDL2/SDL.h>
 
 #include "zimonzk/lists.h"
 
