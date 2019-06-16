@@ -100,9 +100,6 @@ void init_gui(void)
 
 	glGenBuffers(1, &bufferID_vertex);
 	glGenBuffers(1, &bufferID_uv);
-
-	/*test button*/
-	gui_add_button(-0.5f, -0.5f, 0.5f, 96.0f/480.0f, "TEST", NULL, NULL);
 }
 
 void gui_render(void)
@@ -225,7 +222,10 @@ void gui_input(int x, int y, char down)
 			if(down) {
 				button->state = 1;
 			} else {
-				button->state = 0;
+				if(button->state == 1) {
+					button->state = 0;
+					button->cb(button->userdata);
+				}
 			}
 			break;
 		} else {

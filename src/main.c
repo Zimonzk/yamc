@@ -59,6 +59,12 @@ void ontestoption(char *value, void *userdata)
 	SDL_Log("Testvalue = \"%s\"", value);
 }
 
+void ontestbutton(void* userdata) {
+	SDL_Log("ACTION");
+	SDL_Quit();
+	exit(0);
+}
+
 
 /* Our program's entry point */
 int main(int argc, char *argv[])
@@ -124,6 +130,9 @@ int main(int argc, char *argv[])
 	init_entities();
 	initfont();
 	init_gui();
+
+	/*test button*/
+	gui_add_button(-0.5f, -0.5f, 0.5f, 96.0f/480.0f, "TEST", ontestbutton, NULL);		
 
 	{
 		struct entity_index_card card;
