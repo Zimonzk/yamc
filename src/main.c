@@ -32,6 +32,7 @@
 #include "longpos.h"
 #include "fonter.h"
 #include "confconfig.h"
+#include "gui.h"
 
 #define NUMVERT 36
 
@@ -122,6 +123,7 @@ int main(int argc, char *argv[])
 	render_init();
 	init_entities();
 	initfont();
+	init_gui();
 
 	{
 		struct entity_index_card card;

@@ -3,6 +3,8 @@
 #include "longpos.h"
 #include "world.h"
 #include "rendering.h"
+#include "gui.h"
+
 #include <SDL2/SDL.h>
 
 static struct keystates ks = {};
@@ -57,6 +59,9 @@ void handle_mousebutton_event(SDL_MouseButtonEvent* bevent)
 		case SDL_BUTTON_LEFT:
 		if(bevent->type == SDL_MOUSEBUTTONDOWN) {
 			/*button pressed*/
+			if(pause) {
+				gui_input(bevent->x, bevent->y, 1);
+			}
 			if(inreach && !pause) {
 				struct longpos lpos;
 				rrpos_to_lpos(looked_at, player_lpos, lpos);
@@ -72,6 +77,9 @@ void handle_mousebutton_event(SDL_MouseButtonEvent* bevent)
 			}
 		} else {
 			/*button released*/
+			if(pause) {
+				gui_input(bevent->x, bevent->y, 0);
+			}
 		}
 		break;
 	}

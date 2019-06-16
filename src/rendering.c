@@ -29,6 +29,7 @@
 #include "world.h"
 #include "entity.h"
 #include "longpos.h"
+#include "gui.h"
 
 #define ZNEAR 0.1f
 #define ZFAR 10000.0f
@@ -93,7 +94,7 @@ static float fovDeg = 45.0;
 
 static GLuint VertexArrayID; /* vao */
 static GLuint programID; /* shader */
-static GLuint programID_gui;
+static GLuint programID_overlay;
 static GLuint programID_outline;
 static GLuint mvpID;
 static GLuint textureSamplerID;
@@ -199,19 +200,19 @@ void render_init()
 
 
 	programID = LoadShaders("shaders/SimpleVertexShader.vertexshader", "shaders/SimpleFragmentShader.fragmentshader");
-	programID_gui = LoadShaders("shaders/GUI_Vertexshader.vertexshader", "shaders/GUI_Fragmentshader.fragmentshader");
+	programID_overlay = LoadShaders("shaders/Overlay.vertexshader", "shaders/Overlay.fragmentshader");
 	programID_outline = LoadShaders("shaders/Outline_Vertexshader.vertexshader", "shaders/Outline_Fragmentshader.fragmentshader");
 
 	// Get a handle for our "myTextureSampler" uniform
 	textureSamplerID = glGetUniformLocation(programID, "my_sampler");
 	SDL_Log("sampler: %u", textureSamplerID);
 
-	textureSamplerID_gui = glGetUniformLocation(programID_gui, "my_sampler");
+	textureSamplerID_gui = glGetUniformLocation(programID_overlay, "my_sampler");
 	SDL_Log("sampler_gui: %u", textureSamplerID_gui);
-	screen_dimens_id_gui = glGetUniformLocation(programID_gui, "screen_dimens");
-	scale_id_gui = glGetUniformLocation(programID_gui, "scale");
-	offset_id_gui = glGetUniformLocation(programID_gui, "offset");
-	center_id_gui = glGetUniformLocation(programID_gui, "center");
+	screen_dimens_id_gui = glGetUniformLocation(programID_overlay, "screen_dimens");
+	scale_id_gui = glGetUniformLocation(programID_overlay, "scale");
+	offset_id_gui = glGetUniformLocation(programID_overlay, "offset");
+	center_id_gui = glGetUniformLocation(programID_overlay, "center");
 
 	// Get a handle for our "MVP" uniform
 	// Only during the initialisation
@@ -471,7 +472,7 @@ void render_looper()
 
 
 	/*gui rendering*/
-	glUseProgram(programID_gui);
+	glUseProgram(programID_overlay);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnableVertexAttribArray(0);
@@ -496,6 +497,8 @@ void render_looper()
 	glDisableVertexAttribArray(0);
 
 	glEnable(GL_DEPTH_TEST);
+
+	gui_render();
 }
 
 int pick_block(float *rrpos)
