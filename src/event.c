@@ -2,13 +2,25 @@
 
 #include "zimonzk/lists.h"
 #include <string.h>
+#include <pthread.h>
 
 arraylist eventindex;
+
+static arraylist jobs;
+static char jobs_inited = 0;
+static pthread_mutex_t jobs_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct event_handler_compound {
 	event_handler cb;
 	void *userdata;
-}
+};
+
+struct job_compound {
+	event_handler cb;
+	const struct evet_index_card *ic;
+	void *userdata;
+	void *eventdata;
+};
 
 struct event_index_card *register_event(struct event_index_card *ic)
 {
@@ -45,7 +57,7 @@ int register_event_handler(const char *eventname, event_handler cb,
 int trigger_event(struct event_index_card *ic, void *eventdata) {
 	for(int i = 0; i < ic->handlers.used_units; i++) {
 		/* spread onto threads */
-		/* probably via queues of function pointers
+		/* via a queue of function pointers
 		 * and a way to wake up a thread
 		 * that has been waiting for work */
 	}
@@ -70,3 +82,39 @@ void frame_sync_end(void)
 	/* release the mutex */
 }
 
+static *void worker_func(void *data)
+{
+	struct job_compound jc;
+	while(1) {
+		jc = deq_job();
+		jc.cb(jc.ic, jc.eventdata, jc.userdata);
+	}
+	return NULL;
+}
+
+enq_job(struct job_compound)
+{
+	pthread_mutex_lock(&jobs_mutex);
+	if(!jobs_inited) {
+		arraylist_init(&jobs, sizeof(struct job_compound), 16);
+	}
+	arraylist_append(&jobs, &job_compound);
+	/*TODO signal potential waiting threads to continue */
+	pthread_mutex_unlock(&jobs_mutex);
+}
+struct job_compound deq_job(void)
+{
+	struct job_compound jc;
+	pthread_mutex_lock(&jobs_mutex);
+
+	while(!jobs_inited || jobs.used_units == 0) {
+		pthread_mutex_unlock(&jobs_mutex);
+		/*TODO wait for job */
+	}
+	memcpy(&jc, arraylist_get(&jobs, jobs.used_units - 1),
+		sizeof(struct job_compound));
+	arraylist_del_element(&jobs, jobs.used_units - 1);
+	
+	pthread_mutex_unlock(&jobs_mutex);
+	return jc;
+}

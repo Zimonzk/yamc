@@ -23,9 +23,7 @@ int trigger_event(struct event_index_card *event, void *eventdata);
 
 /* this whole thing is probably in need of performance optimization.
  * for examle preventing all worker threads from being locked waiting for the
- * frame to end.
- * also balancing the queues of workers automatically as to not ever leave
- * one without work when there is some work left. */
+ * frame to end. */
 void main_loop_sync_slot(void); /* internal function to allow syncronisation 
 				     with the main loop on demand */
 void frame_sync_begin(void); /* call this to block until the frame ends */
@@ -33,5 +31,8 @@ void frame_sync_end(void); /* call this to allow the next thread waiting for a
 			      slot on the main loop to execute. (or let the
 			      main loop itself continue if there are no more
 			      waiting threads */
+static void *worker_func(void *data); /* internal function */
+static void enq_job(struct job_compound); /* internal function */
+static struct job_compound deq_job(void); /* internal function */
 
 #endif
