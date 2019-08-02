@@ -9,6 +9,7 @@ arraylist eventindex;
 static arraylist jobs;
 static char jobs_inited = 0;
 static pthread_mutex_t jobs_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t jobs_cond = PTHREAD_COND_INITIALIZER;
 
 struct event_handler_compound {
 	event_handler cb;
@@ -23,6 +24,30 @@ struct job_compound {
 };
 
 struct event_index_card *register_event(struct event_index_card *ic)
+{
+	static char eventindex_inited = 0;
+
+	if(!eventindex_inited) {
+		arraylist_init(&eventindex, sizeof(event_index_card), 1);
+	}
+
+	arraylist_append(eventindex, ic);
+
+	ic = arraylist_get(&eventindex, eventindex.used_units - 1);
+
+	arraylist_init(&ic->handlers, sizeof(struct event_handler_compound), 1);
+
+	return ic;
+}
+
+int register_event_handler(const char *eventname, event_handler cb,
+				void *userdata)
+{
+	struct event_handler_compound ehc = {.cb = cb, .userdata = userdata};
+	for(int i = 0; i < eventindex.used_units; i++) {
+		struct event_index_card *ic = arraylist_get(&eventindex, i);
+		const char *checkname = ic->name;
+		if(strcmp(eventname, d *register_event(struct event_index_card *ic)
 {
 	static char eventindex_inited = 0;
 
@@ -100,6 +125,7 @@ enq_job(struct job_compound)
 	}
 	arraylist_append(&jobs, &job_compound);
 	/*TODO signal potential waiting threads to continue */
+	/*only if some are waiting?*/
 	pthread_mutex_unlock(&jobs_mutex);
 }
 struct job_compound deq_job(void)
@@ -110,6 +136,8 @@ struct job_compound deq_job(void)
 	while(!jobs_inited || jobs.used_units == 0) {
 		pthread_mutex_unlock(&jobs_mutex);
 		/*TODO wait for job */
+		pthread_cond_wait(&jobs_cond, &jobs_mutex);
+		/*waiting workers counter?*/
 	}
 	memcpy(&jc, arraylist_get(&jobs, jobs.used_units - 1),
 		sizeof(struct job_compound));
