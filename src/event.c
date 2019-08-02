@@ -85,10 +85,11 @@ int register_event_handler(const char *eventname, event_handler cb,
 
 int trigger_event(struct event_index_card *ic, void *eventdata) {
 	for(int i = 0; i < ic->handlers.used_units; i++) {
-		/* spread onto threads */
+		/* TODO spread onto threads */
 		/* via a queue of function pointers
-		 * and a way to wake up a thread
-		 * that has been waiting for work */
+		 * ++and a way to wake up a thread
+		 * that has been waiting for work++ is now done in the enq_job
+		 * automatically */
 	}
 	return 1; /* means success */
 }
