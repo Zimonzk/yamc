@@ -8,8 +8,20 @@ arraylist eventindex;
 
 static arraylist jobs;
 static char jobs_inited = 0;
+static unsigned int waiting_workers = 0;
 static pthread_mutex_t jobs_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t jobs_cond = PTHREAD_COND_INITIALIZER;
+
+
+static unsigned int syncwaiters = 0; /* the amount of threads waiting for a sync slot */
+static unsigned int pre_syncwaiters = 0; /* the amount of threads wanting to wait
+					  * fot a sync slot but
+					  * the synced threads are not all done yet. */
+static unsigned char syncers_executing = 0; /* wether the synced thready are executing
+					     * atm */
+static pthread_mutex_t sync_meta_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t sync_meta_cond = PTHREAD_COND_INITIALIZER;
+
 
 struct event_handler_compound {
 	event_handler cb;
@@ -40,15 +52,7 @@ struct event_index_card *register_event(struct event_index_card *ic)
 	return ic;
 }
 
-int register_event_handler(const char *eventname, event_handler cb,
-				void *userdata)
-{
-	struct event_handler_compound ehc = {.cb = cb, .userdata = userdata};
-	for(int i = 0; i < eventindex.used_units; i++) {
-		struct event_index_card *ic = arraylist_get(&eventindex, i);
-		const char *checkname = ic->name;
-		if(strcmp(eventname, d *register_event(struct event_index_card *ic)
-{
+struct event_index_card *register_event(struct event_index_card *ic) {
 	static char eventindex_inited = 0;
 
 	if(!eventindex_inited) {
@@ -91,20 +95,45 @@ int trigger_event(struct event_index_card *ic, void *eventdata) {
 
 void main_loop_sync_slot(void)
 {
-	/* free a mutex that is being waited upon by all threads that
-	 * called frame_sync_begin. */
+	/* broadcast a condition variable and then wait
+	 * until all synchronizations have been done */
+	/* the check for all synchronistions is via an integer, which holds
+	 * the cont of threads that still wait for their sync slot. */
+	pthread_mutex_lock(&sync_meta_mutex);
+	pthread_cond_broadcast(&sync_meta_cond);
+	syncers_executing = 1;
 
-	/* then wait for them to release it via frame sync end */
+	pthread_cond_wait(&sync_meta_cond, &sync_meta_mutex);
+	pthread_mutex_unlock(&sync_meta_mutex);
 }
 
 void frame_sync_begin(void)
 {
-	/* wait for the mutex that is released by main_loop_sync_slot */
+	pthread_mutex_lock(&sync_meta_mutex);
+	if(syncers_executing) { /* this entire construct is supposed to prevent
+				 * threads that aquired the mutex while others
+				 * are still competing for it in order to complete
+				 * the sync slot from increasing the waiters while
+				 * it would be impossible for them to decrease the
+				 * waiters count because the cond_wait will only
+				 * trigger in the next slot. */
+		pre_syncwaiters++;
+	} else {
+		syncwaiters++;
+	}
+	pthread_cond_wait(&sync_meta_cond, &sync_meta_mutex);
 }
 
 void frame_sync_end(void)
 {
-	/* release the mutex */
+	if(--syncwaiters == 0) {
+		syncers_executing = 0;
+		syncwaters = pre_syncwaiters;
+		pre_syncwaiters = 0;
+
+		pthread_cond_broadcast(&sync_meta_cond);
+	}
+	pthread_mutex_unlock(&sync_meta_mutex);
 }
 
 static *void worker_func(void *data)
@@ -117,27 +146,32 @@ static *void worker_func(void *data)
 	return NULL;
 }
 
-enq_job(struct job_compound)
+void enq_job(struct job_compound)
 {
 	pthread_mutex_lock(&jobs_mutex);
 	if(!jobs_inited) {
 		arraylist_init(&jobs, sizeof(struct job_compound), 16);
 	}
 	arraylist_append(&jobs, &job_compound);
-	/*TODO signal potential waiting threads to continue */
-	/*only if some are waiting?*/
+	/* signal potential waiting threads to continue */
+	/* only if some are waiting */
+	if(waiting_workers > 0) {
+		pthread_cond_broadcast(&jobs_cond);
+		waiting_workers == 0;
+	}
 	pthread_mutex_unlock(&jobs_mutex);
 }
+
 struct job_compound deq_job(void)
 {
 	struct job_compound jc;
 	pthread_mutex_lock(&jobs_mutex);
 
 	while(!jobs_inited || jobs.used_units == 0) {
-		pthread_mutex_unlock(&jobs_mutex);
-		/*TODO wait for job */
+		/* waiting workers counter */
+		waiting_workers++;
+		/* wait for job */
 		pthread_cond_wait(&jobs_cond, &jobs_mutex);
-		/*waiting workers counter?*/
 	}
 	memcpy(&jc, arraylist_get(&jobs, jobs.used_units - 1),
 		sizeof(struct job_compound));
