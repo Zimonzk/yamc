@@ -1,6 +1,7 @@
 #include "event.h"
 
 #include "zimonzk/lists.h"
+#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -28,38 +29,15 @@ struct event_handler_compound {
 	void *userdata;
 };
 
-struct job_compound {
-	event_handler cb;
-	const struct evet_index_card *ic;
-	void *userdata;
-	void *eventdata;
-};
-
 struct event_index_card *register_event(struct event_index_card *ic)
 {
 	static char eventindex_inited = 0;
 
 	if(!eventindex_inited) {
-		arraylist_init(&eventindex, sizeof(event_index_card), 1);
+		arraylist_init(&eventindex, sizeof(struct event_index_card), 1);
 	}
 
-	arraylist_append(eventindex, ic);
-
-	ic = arraylist_get(&eventindex, eventindex.used_units - 1);
-
-	arraylist_init(&ic->handlers, sizeof(struct event_handler_compound), 1);
-
-	return ic;
-}
-
-struct event_index_card *register_event(struct event_index_card *ic) {
-	static char eventindex_inited = 0;
-
-	if(!eventindex_inited) {
-		arraylist_init(&eventindex, sizeof(event_index_card), 1);
-	}
-
-	arraylist_append(eventindex, ic);
+	arraylist_append(&eventindex, ic);
 
 	ic = arraylist_get(&eventindex, eventindex.used_units - 1);
 
@@ -85,11 +63,13 @@ int register_event_handler(const char *eventname, event_handler cb,
 
 int trigger_event(struct event_index_card *ic, void *eventdata) {
 	for(int i = 0; i < ic->handlers.used_units; i++) {
-		/* TODO spread onto threads */
-		/* via a queue of function pointers
-		 * ++and a way to wake up a thread
-		 * that has been waiting for work++ is now done in the enq_job
-		 * automatically */
+		struct job_compound jc;
+		struct event_handler_compound *ehc = arraylist_get(&ic->handlers, i);
+		jc.cb = ehc->cb;
+		jc.ic = ic;
+		jc.userdata = ehc->userdata;
+		jc.eventdata = eventdata;
+		enq_job(jc);
 	}
 	return 1; /* means success */
 }
@@ -102,9 +82,12 @@ void main_loop_sync_slot(void)
 	 * the cont of threads that still wait for their sync slot. */
 	pthread_mutex_lock(&sync_meta_mutex);
 	pthread_cond_broadcast(&sync_meta_cond);
-	syncers_executing = 1;
+	if(syncwaiters > 0 ) {
+		syncers_executing = 1;
+		pthread_cond_wait(&sync_meta_cond, &sync_meta_mutex);
 
-	pthread_cond_wait(&sync_meta_cond, &sync_meta_mutex);
+	}
+
 	pthread_mutex_unlock(&sync_meta_mutex);
 }
 
@@ -129,7 +112,7 @@ void frame_sync_end(void)
 {
 	if(--syncwaiters == 0) {
 		syncers_executing = 0;
-		syncwaters = pre_syncwaiters;
+		syncwaiters = pre_syncwaiters;
 		pre_syncwaiters = 0;
 
 		pthread_cond_broadcast(&sync_meta_cond);
@@ -137,7 +120,7 @@ void frame_sync_end(void)
 	pthread_mutex_unlock(&sync_meta_mutex);
 }
 
-static *void worker_func(void *data)
+static void *worker_func(void *data)
 {
 	struct job_compound jc;
 	while(1) {
@@ -147,13 +130,20 @@ static *void worker_func(void *data)
 	return NULL;
 }
 
-void enq_job(struct job_compound)
+void enq_job(struct job_compound jc)
 {
 	pthread_mutex_lock(&jobs_mutex);
 	if(!jobs_inited) {
 		arraylist_init(&jobs, sizeof(struct job_compound), 16);
+		jobs_inited = 1;
+		/* might as well spawn the workers here, as they cannot be needed
+		 * before this piece of code is executed. */
+		for(int i = 0; i < NUM_WORKERS; i++) {
+			pthread_t thr;
+			pthread_create(&thr, NULL, worker_func, NULL);
+		}
 	}
-	arraylist_append(&jobs, &job_compound);
+	arraylist_append(&jobs, &jc);
 	/* signal potential waiting threads to continue */
 	/* only if some are waiting */
 	if(waiting_workers > 0) {
@@ -168,7 +158,7 @@ struct job_compound deq_job(void)
 	struct job_compound jc;
 	pthread_mutex_lock(&jobs_mutex);
 
-	while(!jobs_inited || jobs.used_units == 0) {
+	while(!jobs_inited || (jobs.used_units == 0)) {
 		/* waiting workers counter */
 		waiting_workers++;
 		/* wait for job */

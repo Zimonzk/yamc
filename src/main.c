@@ -33,6 +33,7 @@
 #include "fonter.h"
 #include "confconfig.h"
 #include "gui.h"
+#include "event.h"
 
 #define NUMVERT 36
 
@@ -59,10 +60,25 @@ void ontestoption(char *value, void *userdata)
 	SDL_Log("Testvalue = \"%s\"", value);
 }
 
-void ontestbutton(void* userdata) {
+void ontestbutton(void* userdata)
+{
+	struct event_index_card *ic = userdata;
 	SDL_Log("ACTION");
+	trigger_event(ic, "came from testbutton! xD");
+	//SDL_Quit();
+	//exit(0);
+}
+
+void ontestevent(const struct event_index_card * ic,
+				void* eventdata, void * userdata)
+{
+	SDL_Log("Eventdata: %s\n", (char *)eventdata);
+	SDL_Log("Userdata: %s\n", (char *)userdata);
+
+	frame_sync_begin();
 	SDL_Quit();
 	exit(0);
+	frame_sync_end();
 }
 
 
@@ -131,8 +147,13 @@ int main(int argc, char *argv[])
 	initfont();
 	init_gui();
 
-	/*test button*/
-	gui_add_button(-0.5f, -0.5f, 0.5f, 96.0f/480.0f, "TEST", ontestbutton, NULL);		
+	{
+		struct event_index_card ic = {.name = "sys.TEST"};
+		struct event_index_card *ic_reg = register_event(&ic);
+		register_event_handler("sys.TEST", ontestevent, "is user data! :)");
+		/*test button*/
+		gui_add_button(-0.5f, -0.5f, 0.5f, 96.0f/480.0f, "TEST", ontestbutton, (void *)ic_reg);
+	}		
 
 	{
 		struct entity_index_card card;
@@ -190,6 +211,9 @@ int main(int argc, char *argv[])
 		render_text("Hello world!", 0.0f, 0.0f);
 		snprintf(fpsstr, 64, "%.1f FPS", fps);
 		render_text(fpsstr, -1.0f, 1.0f - (32.0f/480.0f));
+
+		/* allows events to synchronize to the main loop at this point. */
+		main_loop_sync_slot();
 
 
 		/* buffer swap*/

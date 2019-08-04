@@ -3,19 +3,29 @@
 
 #include "zimonzk/lists.h"
 
+#define NUM_WORKERS 64
+
 struct event_index_card {
 	const char *name; /* unique name use dots for grouping
 			   * eg. sys.player.move */
 	arraylist handlers; /* will be filled by register_event_handler */
-}
+};
 
 typedef void (*event_handler)(const struct event_index_card * ic,
 				void* eventdata, void * userdata);
 
+struct job_compound { /* internal struct */
+	event_handler cb;
+	const struct event_index_card *ic;
+	void *userdata;
+	void *eventdata;
+};
+
+
 struct event_index_card *register_event(struct event_index_card *ic);
 
 /* the handlers will be executed in parallel. do not male assumptions about
- * sceduling behavior pls. when needed yuo need to synchronize with other
+ * sceduling behavior pls. when needed you need to synchronize with other
  * events on your own through eventdata or userdata */
 int register_event_handler(const char *eventname, event_handler cb, void *userdata);
 
