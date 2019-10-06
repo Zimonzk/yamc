@@ -144,6 +144,29 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 			ks.DOWN = kevent->type == SDL_KEYDOWN ? 1 : 0;
 			break;
 	}
+	for(int i = 0; i < controls.used_units; i++) {
+		struct control_element *celp =
+			arraylist_get(&controls, i);
+		/*tlog(5, "Checking for control nr. %i", i);
+		tlog(5, "got %i, have %i", kevent->keysym.sym, celp->keycode);*/
+
+		if((celp->keycode == kevent->keysym.sym)) {
+			uint16_t keymod_w, keymod_h, ig_keymod_w, ig_keymod_h;
+			keymod_w = celp->keymod;
+			keymod_h = kevent->keysym.mod;
+			ig_keymod_w = keymod_w & ~(KMOD_NUM|KMOD_CAPS);
+			ig_keymod_h = keymod_h & ~(KMOD_NUM|KMOD_CAPS);
+
+			/*tlog(5, "w %i, h %i, iw %i, ih %i", keymod_w, keymod_h,
+					ig_keymod_w, ig_keymod_h);*/
+
+			if(ig_keymod_w == ig_keymod_h) {
+			zlog(5, "Found corresponding control for input.");
+			celp->ccb(celp->name, (kevent->type == SDL_KEYDOWN) ?
+				       	KEY_DOWN : KEY_UP, celp->userdata);
+			}
+		}
+	}
 }
 
 void handle_mousemotion_event(SDL_MouseMotionEvent* mvevent)

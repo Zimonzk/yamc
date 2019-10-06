@@ -84,6 +84,16 @@ void ontestevent(const struct event_index_card * ic,
 	frame_sync_end();
 }
 
+void ontestkey(char *name, enum keypress kp, void *userdata)
+{
+	if(kp == KEY_DOWN) {
+		zlog(5, "Testkey pressed");
+	} else {
+		zlog(5, "Testkey released.");
+	}
+	zlog(5, "Control name is: \"%s\". Userdata is %p", name, userdata);
+}
+
 
 /* Our program's entry point */
 int main(int argc, char *argv[])
@@ -97,7 +107,7 @@ int main(int argc, char *argv[])
 	long frame_num = 0;
 	char fpsstr[64];
 
-						struct confstate confstate = {};
+	struct confstate confstate = {};
 
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
@@ -183,6 +193,8 @@ int main(int argc, char *argv[])
 		
 		lep = spawn_entity(eic, chunk, pos);
 	}
+
+	add_control_key("testkey", ontestkey, fpsstr, SDLK_0, KMOD_LCTRL);
 
 	SDL_Log("Entering main loop");
 
