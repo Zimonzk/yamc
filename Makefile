@@ -23,7 +23,8 @@ yamc: $(OBJ) dep lib/liblists.a lib/liblogger.a lib/libsimplex.a
 	$(CC) $(CFLAGS) -o yamc $(OBJ) $(LDFLAGS)
 
 dep: $(SRC)
-	$(CC) -MM $(CFLAGS) $(SRC) > $(DEPENDFILE)
+	$(CC) $(CFLAGS) -MM $(SRC) > $(DEPENDFILE)
+	sed -i 's/..*\.o/$(OBJDIR)\/&/' $(DEPENDFILE)
 
 -include $(DEPENDFILE)
 

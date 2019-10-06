@@ -8,7 +8,7 @@
 
 #define yamc_terminate(ERROR, MSG) \
 { \
-	terror("Game got terminated from file %s, line %i. Reason:\n%s\n", \
+	terror("Game got terminated from file \"%s\", line %i. Reason:\n%s\n", \
 			__FILE__, __LINE__, MSG); \
 	exit(ERROR); \
 }
