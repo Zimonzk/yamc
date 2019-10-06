@@ -23,7 +23,7 @@ typedef void (*key_callback)(char* value, void *userdata);
  * Registering multiple keys which are the same (either in value or in content) will
  * cause only the first callback to be called.
  * Keys may contain any character except whitespaces and '='. 
- * Values however can contain any character except newline*/
+ * Values however can contain any character except newline */
 int conf_register_key(struct confstate *cs, char *key, key_callback kcb, void *userdata);
 
 int conf_parse_file(struct confstate *cs, char *path);

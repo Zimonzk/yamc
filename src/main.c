@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +20,7 @@
 
 #define PROGRAM_NAME "YAMC"
 
+#include "zimonzk/logger.h"
 #include "dndndefs.h"
 #include "shader.h"
 #include "matr.h"
@@ -34,6 +36,7 @@
 #include "confconfig.h"
 #include "gui.h"
 #include "event.h"
+#include "toolbox.h"
 
 #define NUMVERT 36
 
@@ -77,7 +80,7 @@ void ontestevent(const struct event_index_card * ic,
 
 	frame_sync_begin();
 	SDL_Quit();
-	exit(0);
+	yamc_terminate(0, "Testterminaton for testbutton");
 	frame_sync_end();
 }
 
@@ -94,17 +97,20 @@ int main(int argc, char *argv[])
 	long frame_num = 0;
 	char fpsstr[64];
 
-	struct confstate confstate = {};
+						struct confstate confstate = {};
 
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
 
 	unsigned int side_texi, top_texi;
 
+	tset_verbosity(5);
+	tlog(5, "Verbosity set to 5.");
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
 		sdldie("Unable to initialize SDL"); /* Or die on error */
 	}
-	SDL_Log("SDL initialized");
+	tlog(2, "SDL initialized");
 
 	/* Request opengl 3.2 context.
 	 * SDL doesn't have the ability to choose which profile at this time of writing,
@@ -142,6 +148,7 @@ int main(int argc, char *argv[])
 		sdldie("Invalid config file");
 	}
 
+	init_controls();
 	render_init();
 	init_entities();
 	initfont();

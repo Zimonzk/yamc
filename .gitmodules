@@ -4,3 +4,6 @@
 [submodule "lists_submodule"]
 	path = lists_submodule
 	url = git@github.com:Zimonzk/lists.git
+[submodule "logger_submodule"]
+	path = logger_submodule
+	url = ./logger_submodule/

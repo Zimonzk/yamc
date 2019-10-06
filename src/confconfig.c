@@ -53,5 +53,6 @@ void conf_destroy_state(struct confstate *cs)
 {
 	arraylist_delete(&cs->keys);
 	arraylist_delete(&cs->key_callbacks);
+	arraylist_delete(&cs->userdatas);
 }
 

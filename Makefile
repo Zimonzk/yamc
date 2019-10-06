@@ -1,13 +1,13 @@
 CC = gcc
 CFLAGS = -I ./include -Wformat -Wimplicit-function-declaration -Werror=implicit-function-declaration -Wreturn-type -Werror=return-type -std=c99 -ggdb
 ifeq ($(OS),Windows_NT)
-LDFLAGS = -L ./lib -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -llists -lpng -lpthread -Wl,-subsystem,windows
+LDFLAGS = -L ./lib -lmingw32 -lsdl2main -lsdl2 -lopengl32 -lglew32 -lsimplex -llists -llogger -lpng -lpthread -Wl,-subsystem,windows
 else
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-LDFLAGS = -L ./lib -framework OpenGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lpthread -lm
+LDFLAGS = -L ./lib -framework OpenGL -lGLEW -lsimplex -llists -llogger -lSDL2 -lpng -lpthread -lm
 else
-LDFLAGS = -L ./lib -lGL -lGLEW -lsimplex -llists -lSDL2 -lpng -lpthread -lm
+LDFLAGS = -L ./lib -lGL -lGLEW -lsimplex -llists -llogger -lSDL2 -lpng -lpthread -lm
 endif
 endif
 
@@ -19,7 +19,7 @@ $(info $(SRC))
 $(info $(OBJ))
 DEPENDFILE = .depend
 
-yamc: $(OBJ) dep lib/liblists.a lib/libsimplex.a
+yamc: $(OBJ) dep lib/liblists.a lib/liblogger.a lib/libsimplex.a
 	$(CC) $(CFLAGS) -o yamc $(OBJ) $(LDFLAGS)
 
 dep: $(SRC)
@@ -35,6 +35,12 @@ lib/liblists.a: lists_submodule/liblists.a
 
 lists_submodule/liblists.a: FORCE
 	cd lists_submodule && make
+
+lib/liblogger.a: logger_submodule/liblogger.a
+	cp logger_submodule/liblogger.a lib/liblogger.a
+
+logger_submodule/liblogger.a: FORCE
+	cd logger_submodule && make
 
 lib/libsimplex.a: simplex-noise_submodule/open-simplex-noise.o
 	ar -rcs lib/libsimplex.a simplex-noise_submodule/open-simplex-noise.o
