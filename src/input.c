@@ -16,17 +16,46 @@
 
 static struct keystates ks = {};
 static SDL_bool game_pause = SDL_FALSE;
-static struct confstate keyconfig;
 static arraylist controls;
 
 extern char inreach;
 extern struct longpos player_lpos;
 extern float looked_at[3];
 
+static void on_forward(char *name, enum keypress kp, void *userdata)
+{
+	ks.UP = (kp == KEY_DOWN) ? 1 : 0;
+}
+
+static void on_backward(char *name, enum keypress kp, void *userdata)
+{
+	ks.DOWN = (kp == KEY_DOWN) ? 1 : 0;
+}
+
+static void on_left(char *name, enum keypress kp, void *userdata)
+{
+	ks.LEFT = (kp == KEY_DOWN) ? 1 : 0;
+}
+
+static void on_right(char *name, enum keypress kp, void *userdata)
+{
+	ks.RIGHT = (kp == KEY_DOWN) ? 1 : 0;
+}
+
 
 void init_controls()
 {
 	arraylist_init(&controls, sizeof(struct control_element), 1);
+	tlog(5, "Inited controls list.");
+	add_control_key("Forward", (control_callback)on_forward, NULL, SDLK_UP,
+			KMOD_NONE);
+	add_control_key("Backward", (control_callback)on_backward, NULL, SDLK_DOWN,
+			KMOD_NONE);
+	add_control_key("Left", (control_callback)on_left, NULL, SDLK_LEFT,
+			KMOD_NONE);
+	add_control_key("Right", (control_callback)on_right, NULL, SDLK_RIGHT,
+			KMOD_NONE);
+	tlog(5, "Inited default movement keybindings.");
 }
 
 static char *keymod_tostring(SDL_Keymod keymod);
@@ -45,7 +74,8 @@ static void kmcb(char *value, char **mod_value)
 void add_control_key(char * name, control_callback ccb, void *userdata,
 	       SDL_Keycode default_keycode, SDL_Keymod default_keymod)
 {
-	struct control_element celem;
+	struct confstate keyconfig = {};
+	struct control_element celem = {};
 	char *key_key, *key_mod;
 	char *val_key = 0, *val_mod = 0;
 	key_key = malloc(strlen(name) + 5); /* _key\0 */
@@ -53,14 +83,23 @@ void add_control_key(char * name, control_callback ccb, void *userdata,
 	if(key_mod == 0 || key_key == 0) {
 		yamc_terminate(ENOMEM, "Failed to allocate memory.");
 	}
+	tlog(5, "a0");
 	sprintf(key_key, "%s%s", name, "_key");
+	tlog(5, "a1");
 	sprintf(key_mod, "%s%s", name, "_mod");
+	tlog(5, "a2");
 	conf_register_key(&keyconfig, key_key, (key_callback)kkcb, &val_key);
+	tlog(5, "a3");
 	conf_register_key(&keyconfig, key_mod, (key_callback)kmcb, &val_mod);
+	tlog(5, "a4");
 
 	conf_parse_file(&keyconfig, "config/controls.conf");
 
+	tlog(5, "a5");
+
 	conf_destroy_state(&keyconfig);
+
+	tlog(5, "a6");
 
 
 	if(val_key != 0) {
@@ -136,13 +175,13 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 				}
 			}
 			break;
-		case SDLK_UP:
+		/*case SDLK_UP:
 			ks.UP = kevent->type == SDL_KEYDOWN ? 1 : 0;
 			//SDL_Log("UP: %i", (int) ks.UP);
 			break;
 		case SDLK_DOWN:
 			ks.DOWN = kevent->type == SDL_KEYDOWN ? 1 : 0;
-			break;
+			break;*/
 	}
 	for(int i = 0; i < controls.used_units; i++) {
 		struct control_element *celp =
@@ -319,6 +358,7 @@ static char *keymod_tostring(SDL_Keymod keymod)
 
 	return kmstr;
 }
+
 static SDL_Keymod keymod_fromstring(char *name)
 {
 	char *token;

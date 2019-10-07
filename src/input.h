@@ -6,6 +6,8 @@
 struct keystates {
     char UP;
     char DOWN;
+    char LEFT;
+    char RIGHT;
 };
 
 enum keypress {KEY_UP, KEY_DOWN};

@@ -21,7 +21,47 @@ struct longpos player_lpos = {.chunk={0, 0}, .rpos={8, 24, 8}};
 void move_player(Uint32 difftime)
 {
 	struct keystates ks = *get_keystates();
+	float rel_speed_angle = 0;
+	int does_move = 0;
 	if(ks.UP) {
+		does_move = 1;
+		rel_speed_angle = 0;
+	}
+	if(ks.DOWN) {
+		if(ks.LEFT) {
+			does_move = 0;
+		} else {
+			does_move = 1;
+		}
+		rel_speed_angle = M_PI;
+	}
+	if(ks.LEFT) {
+		if(does_move) {
+			rel_speed_angle = (rel_speed_angle > (M_PI / 2)) ? (-M_PI/4) : (-(3*M_PI)/4);
+		} else {
+			does_move = 1;
+			rel_speed_angle = -M_PI/2;
+		}
+	}
+	if(ks.RIGHT) {
+		if(ks.LEFT) {
+			does_move = 0;
+		} else {
+			if(does_move) {
+				rel_speed_angle = (rel_speed_angle > (M_PI / 2)) ? ((3*M_PI)/4) : (M_PI/4);
+			} else {
+				does_move = 1;
+				rel_speed_angle = M_PI/2;
+			}
+		}
+	}
+
+	player_lpos.rpos[0] += player_speed * (float) does_move * difftime * sin(player_yaw_rad + rel_speed_angle) * cos(player_pitch_rad);
+	player_lpos.rpos[1] += player_speed * (float) does_move * difftime * sin(player_pitch_rad);
+	player_lpos.rpos[2] += player_speed * (float) does_move * difftime * cos(player_yaw_rad + rel_speed_angle) * cos(player_pitch_rad);
+
+	
+	/*if(ks.UP) {
 		player_lpos.rpos[0] += player_speed * difftime * sin(player_yaw_rad) * cos(player_pitch_rad);
 		player_lpos.rpos[1] += player_speed * difftime * sin(player_pitch_rad);
 		player_lpos.rpos[2] += player_speed * difftime * cos(player_yaw_rad) * cos(player_pitch_rad);
@@ -30,8 +70,8 @@ void move_player(Uint32 difftime)
 		player_lpos.rpos[0] -= player_speed * difftime * sin(player_yaw_rad) * cos(player_pitch_rad);
 		player_lpos.rpos[1] -= player_speed * difftime * sin(player_pitch_rad);
 		player_lpos.rpos[2] -= player_speed * difftime * cos(player_yaw_rad) * cos(player_pitch_rad);
-	}
-	if(ks.DOWN || ks.UP) {
+	}*/
+	if(does_move) {
 		/*X chunk changing*/
 		if(player_lpos.rpos[0] > (double) CHUNK_LIM_HOR) {
 			SDL_Log("Player changed chunk X+");
