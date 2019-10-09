@@ -47,6 +47,9 @@ void init_controls()
 {
 	arraylist_init(&controls, sizeof(struct control_element), 1);
 	tlog(5, "Inited controls list.");
+	/* TODO: only use one function and determine key via userdata.
+	 * also use ond char for all directions and add actual up and down and
+	 * rename what is now up and down to the proper forward and backward. */
 	add_control_key("Forward", (control_callback)on_forward, NULL, SDLK_UP,
 			KMOD_NONE);
 	add_control_key("Backward", (control_callback)on_backward, NULL, SDLK_DOWN,
