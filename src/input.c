@@ -14,7 +14,7 @@
 #include <SDL2/SDL.h>
 #include <string.h>
 
-static struct keystates ks = {};
+static char movement_directions = 0;
 static SDL_bool game_pause = SDL_FALSE;
 static arraylist controls;
 
@@ -22,26 +22,15 @@ extern char inreach;
 extern struct longpos player_lpos;
 extern float looked_at[3];
 
-static void on_forward(char *name, enum keypress kp, void *userdata)
+static void on_direction(char *name, enum keypress kp, void *userdata)
 {
-	ks.UP = (kp == KEY_DOWN) ? 1 : 0;
+	zlog(5, "ud %i", (int)userdata);
+	if(kp == KEY_UP) {
+		movement_directions &= !(char)userdata;
+	} else {
+		movement_directions |= (char)userdata;
+	}
 }
-
-static void on_backward(char *name, enum keypress kp, void *userdata)
-{
-	ks.DOWN = (kp == KEY_DOWN) ? 1 : 0;
-}
-
-static void on_left(char *name, enum keypress kp, void *userdata)
-{
-	ks.LEFT = (kp == KEY_DOWN) ? 1 : 0;
-}
-
-static void on_right(char *name, enum keypress kp, void *userdata)
-{
-	ks.RIGHT = (kp == KEY_DOWN) ? 1 : 0;
-}
-
 
 void init_controls()
 {
@@ -50,14 +39,18 @@ void init_controls()
 	/* TODO: only use one function and determine key via userdata.
 	 * also use ond char for all directions and add actual up and down and
 	 * rename what is now up and down to the proper forward and backward. */
-	add_control_key("Forward", (control_callback)on_forward, NULL, SDLK_UP,
-			KMOD_NONE);
-	add_control_key("Backward", (control_callback)on_backward, NULL, SDLK_DOWN,
-			KMOD_NONE);
-	add_control_key("Left", (control_callback)on_left, NULL, SDLK_LEFT,
-			KMOD_NONE);
-	add_control_key("Right", (control_callback)on_right, NULL, SDLK_RIGHT,
-			KMOD_NONE);
+	add_control_key("Up", (control_callback)on_direction,
+			DIRECTION_UP, SDLK_KP_0, KMOD_NONE);
+	add_control_key("Down", (control_callback)on_direction,
+			DIRECTION_DOWN, SDLK_RSHIFT, KMOD_NONE);
+	add_control_key("Forward", (control_callback)on_direction,
+			DIRECTION_FORWARD, SDLK_UP, KMOD_NONE);
+	add_control_key("Backward", (control_callback)on_direction,
+			DIRECTION_BACKWARD, SDLK_DOWN, KMOD_NONE);
+	add_control_key("Left", (control_callback)on_direction,
+			DIRECTION_LEFT, SDLK_LEFT, KMOD_NONE);
+	add_control_key("Right", (control_callback)on_direction, 
+			DIRECTION_RIGHT, SDLK_RIGHT, KMOD_NONE);
 	tlog(5, "Inited default movement keybindings.");
 }
 
@@ -75,7 +68,7 @@ static void kmcb(char *value, char **mod_value)
 }
 
 void add_control_key(char * name, control_callback ccb, void *userdata,
-	       SDL_Keycode default_keycode, SDL_Keymod default_keymod)
+		SDL_Keycode default_keycode, SDL_Keymod default_keymod)
 {
 	struct confstate keyconfig = {};
 	struct control_element celem = {};
@@ -129,7 +122,7 @@ void add_control_key(char * name, control_callback ccb, void *userdata,
 					" appending.");
 		}
 		fprintf(configf, "\n%s = %s", key_key,
-			       SDL_GetKeyName(default_keycode));
+				SDL_GetKeyName(default_keycode));
 		if(val_mod != 0) {
 			/* only modifier defined */
 			default_keymod = keymod_fromstring(val_mod);
@@ -178,11 +171,11 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 				}
 			}
 			break;
-		/*case SDLK_UP:
-			ks.UP = kevent->type == SDL_KEYDOWN ? 1 : 0;
+			/*case SDLK_UP:
+			  ks.UP = kevent->type == SDL_KEYDOWN ? 1 : 0;
 			//SDL_Log("UP: %i", (int) ks.UP);
 			break;
-		case SDLK_DOWN:
+			case SDLK_DOWN:
 			ks.DOWN = kevent->type == SDL_KEYDOWN ? 1 : 0;
 			break;*/
 	}
@@ -190,7 +183,7 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 		struct control_element *celp =
 			arraylist_get(&controls, i);
 		/*tlog(5, "Checking for control nr. %i", i);
-		tlog(5, "got %i, have %i", kevent->keysym.sym, celp->keycode);*/
+		  tlog(5, "got %i, have %i", kevent->keysym.sym, celp->keycode);*/
 
 		if((celp->keycode == kevent->keysym.sym)) {
 			uint16_t keymod_w, keymod_h, ig_keymod_w, ig_keymod_h;
@@ -200,12 +193,12 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 			ig_keymod_h = keymod_h & ~(KMOD_NUM|KMOD_CAPS);
 
 			/*tlog(5, "w %i, h %i, iw %i, ih %i", keymod_w, keymod_h,
-					ig_keymod_w, ig_keymod_h);*/
+			  ig_keymod_w, ig_keymod_h);*/
 
 			if(ig_keymod_w == ig_keymod_h) {
-			zlog(5, "Found corresponding control for input.");
-			celp->ccb(celp->name, (kevent->type == SDL_KEYDOWN) ?
-				       	KEY_DOWN : KEY_UP, celp->userdata);
+				zlog(5, "Found corresponding control for input.");
+				celp->ccb(celp->name, (kevent->type == SDL_KEYDOWN) ?
+						KEY_DOWN : KEY_UP, celp->userdata);
 			}
 		}
 	}
@@ -223,36 +216,36 @@ void handle_mousebutton_event(SDL_MouseButtonEvent* bevent)
 {
 	switch(bevent->button) {
 		case SDL_BUTTON_LEFT:
-		if(bevent->type == SDL_MOUSEBUTTONDOWN) {
-			/*button pressed*/
-			if(game_pause) {
-				gui_input(bevent->x, bevent->y, 1);
-			}
-			if(inreach && !game_pause) {
-				struct longpos lpos;
-				rrpos_to_lpos(looked_at, player_lpos, lpos);
-				chunk* mchunk = world(lpos.chunk[0], lpos.chunk[1]);
-				mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].id = 0;
-				mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
-				/* TODO check if the chunk is loaded (has mesh) */
-				update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
-				SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
-				SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
+			if(bevent->type == SDL_MOUSEBUTTONDOWN) {
+				/*button pressed*/
+				if(game_pause) {
+					gui_input(bevent->x, bevent->y, 1);
+				}
+				if(inreach && !game_pause) {
+					struct longpos lpos;
+					rrpos_to_lpos(looked_at, player_lpos, lpos);
+					chunk* mchunk = world(lpos.chunk[0], lpos.chunk[1]);
+					mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].id = 0;
+					mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
+					/* TODO check if the chunk is loaded (has mesh) */
+					update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
+					SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+					SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
+				} else {
+					SDL_Log("Not looking at a block in reach or game paused.");
+				}
 			} else {
-				SDL_Log("Not looking at a block in reach or game paused.");
+				/*button released*/
+				if(game_pause) {
+					gui_input(bevent->x, bevent->y, 0);
+				}
 			}
-		} else {
-			/*button released*/
-			if(game_pause) {
-				gui_input(bevent->x, bevent->y, 0);
-			}
-		}
-		break;
+			break;
 	}
 }
 
-struct keystates* get_keystates(void) {
-	return &ks;
+char get_movement_directions(void) {
+	return movement_directions;
 }
 
 static char *keymod_tostring(SDL_Keymod keymod)
@@ -353,7 +346,7 @@ static char *keymod_tostring(SDL_Keymod keymod)
 			}
 			strcat(kmstr, "MODE+");
 		}
-			
+
 		if(strlen(kmstr) > 0) {
 			kmstr[strlen(kmstr) - 1] = '\0';
 		}

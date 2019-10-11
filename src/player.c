@@ -1,5 +1,6 @@
 #define _USE_MATH_DEFINES
 
+#include "plogger.h"
 #include "player.h"
 #include "input.h"
 #include "chunk.h"
@@ -20,80 +21,60 @@ struct longpos player_lpos = {.chunk={0, 0}, .rpos={8, 24, 8}};
 
 void move_player(Uint32 difftime)
 {
-	struct keystates ks = *get_keystates();
-	float rel_speed_angle = 0;
-	int does_move = 0;
-	if(ks.UP) {
-		does_move = 1;
-		rel_speed_angle = 0;
-	}
-	if(ks.DOWN) {
-		if(ks.LEFT) {
-			does_move = 0;
-		} else {
-			does_move = 1;
+	char md = get_movement_directions();
+	tlog(5, "movement_directions %i.", (int)md);
+	char x_active = ((md & DIRECTION_LEFT) || (md & DIRECTION_RIGHT)) &&
+		!((md & DIRECTION_LEFT) && (md & DIRECTION_RIGHT));
+	char z_active = ((md & DIRECTION_FORWARD) || (md & DIRECTION_BACKWARD))
+		&& !((md & DIRECTION_FORWARD) && (md & DIRECTION_BACKWARD));
+
+	float px = (z_active ? 0.7071 : 1) *
+		(((md & DIRECTION_LEFT) ? 1 : 0)
+		 -((md & DIRECTION_RIGHT) ? 1 : 0)) *
+		player_speed;
+	float pz = (x_active ? 0.7071 : 1) *
+		(((md & DIRECTION_FORWARD) ? 1 : 0)
+		 -((md & DIRECTION_BACKWARD) ? 1 : 0)) *
+		player_speed;
+
+
+	player_lpos.rpos[0] += difftime * (px * cos(player_yaw_rad) +
+			pz * sin(player_yaw_rad)) ;
+
+	if(md & DIRECTION_UP) {
+		if(!(md & DIRECTION_DOWN)) {
+			player_lpos.rpos[1] += player_speed * difftime;
 		}
-		rel_speed_angle = M_PI;
-	}
-	if(ks.LEFT) {
-		if(does_move) {
-			rel_speed_angle = (rel_speed_angle > (M_PI / 2)) ? (-M_PI/4) : (-(3*M_PI)/4);
-		} else {
-			does_move = 1;
-			rel_speed_angle = -M_PI/2;
-		}
-	}
-	if(ks.RIGHT) {
-		if(ks.LEFT) {
-			does_move = 0;
-		} else {
-			if(does_move) {
-				rel_speed_angle = (rel_speed_angle > (M_PI / 2)) ? ((3*M_PI)/4) : (M_PI/4);
-			} else {
-				does_move = 1;
-				rel_speed_angle = M_PI/2;
-			}
-		}
+	} else if(md & DIRECTION_DOWN) {
+		player_lpos.rpos[1] -= player_speed * difftime;
 	}
 
-	player_lpos.rpos[0] += player_speed * (float) does_move * difftime * sin(player_yaw_rad + rel_speed_angle) * cos(player_pitch_rad);
-	player_lpos.rpos[1] += player_speed * (float) does_move * difftime * sin(player_pitch_rad);
-	player_lpos.rpos[2] += player_speed * (float) does_move * difftime * cos(player_yaw_rad + rel_speed_angle) * cos(player_pitch_rad);
+	player_lpos.rpos[2] += difftime * (pz * cos(player_yaw_rad) +
+			px * sin(player_yaw_rad)) ;
 
-	
-	/*if(ks.UP) {
-		player_lpos.rpos[0] += player_speed * difftime * sin(player_yaw_rad) * cos(player_pitch_rad);
-		player_lpos.rpos[1] += player_speed * difftime * sin(player_pitch_rad);
-		player_lpos.rpos[2] += player_speed * difftime * cos(player_yaw_rad) * cos(player_pitch_rad);
+
+	/*X chunk changing*/
+	if(player_lpos.rpos[0] > (double) CHUNK_LIM_HOR) {
+		SDL_Log("Player changed chunk X+");
+		player_lpos.rpos[0] -= (double) CHUNK_LIM_HOR;
+		player_lpos.chunk[0]++;
+	} else if(player_lpos.rpos[0] < 0) {
+		SDL_Log("Player changed chunk X-");
+		player_lpos.rpos[0] += (double) CHUNK_LIM_HOR;
+		player_lpos.chunk[0]--;
 	}
-	if(ks.DOWN) {
-		player_lpos.rpos[0] -= player_speed * difftime * sin(player_yaw_rad) * cos(player_pitch_rad);
-		player_lpos.rpos[1] -= player_speed * difftime * sin(player_pitch_rad);
-		player_lpos.rpos[2] -= player_speed * difftime * cos(player_yaw_rad) * cos(player_pitch_rad);
-	}*/
-	if(does_move) {
-		/*X chunk changing*/
-		if(player_lpos.rpos[0] > (double) CHUNK_LIM_HOR) {
-			SDL_Log("Player changed chunk X+");
-			player_lpos.rpos[0] -= (double) CHUNK_LIM_HOR;
-			player_lpos.chunk[0]++;
-		} else if(player_lpos.rpos[0] < 0) {
-			SDL_Log("Player changed chunk X-");
-			player_lpos.rpos[0] += (double) CHUNK_LIM_HOR;
-			player_lpos.chunk[0]--;
-		}
-		/*Z chunk changing*/
-		if(player_lpos.rpos[2] > (double) CHUNK_LIM_HOR) {
-			SDL_Log("Player changed chunk Z+");
-			player_lpos.rpos[2] -= (double) CHUNK_LIM_HOR;
-			player_lpos.chunk[1]++;
-		} else if(player_lpos.rpos[2] < 0) {
-			SDL_Log("Player changed chunk Z-");
-			player_lpos.rpos[2] += (double) CHUNK_LIM_HOR;
-			player_lpos.chunk[1]--;
-		}
-		/*WARNING this implies that a player never moves more than a chunk per movement calculation*/	
+	/*Z chunk changing*/
+	if(player_lpos.rpos[2] > (double) CHUNK_LIM_HOR) {
+		SDL_Log("Player changed chunk Z+");
+		player_lpos.rpos[2] -= (double) CHUNK_LIM_HOR;
+		player_lpos.chunk[1]++;
+	} else if(player_lpos.rpos[2] < 0) {
+		SDL_Log("Player changed chunk Z-");
+		player_lpos.rpos[2] += (double) CHUNK_LIM_HOR;
+		player_lpos.chunk[1]--;
 	}
+	/*WARNING this implies that a player never moves more than a chunk per movement calculation*/	
+
 	//SDL_Log("Players new rpos: %lf|%lf|%lf", player_lpos.rpos[0], player_lpos.rpos[1], player_lpos.rpos[2]); 
 }
 

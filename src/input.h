@@ -3,12 +3,12 @@
 
 #include <SDL2/SDL.h>
 
-struct keystates {
-    char UP;
-    char DOWN;
-    char LEFT;
-    char RIGHT;
-};
+#define DIRECTION_UP 1 << 0
+#define DIRECTION_DOWN 1 << 1
+#define DIRECTION_FORWARD 1 << 2
+#define DIRECTION_BACKWARD 1 << 3
+#define DIRECTION_LEFT 1 << 4
+#define DIRECTION_RIGHT 1 << 5
 
 enum keypress {KEY_UP, KEY_DOWN};
 
@@ -33,6 +33,6 @@ void handle_mousemotion_event(SDL_MouseMotionEvent* mvevent);
 
 void handle_mousebutton_event(SDL_MouseButtonEvent* bevent);
 
-struct keystates* get_keystates(void);
+char get_movement_directions(void);
 
 #endif // INPUT_H_INCLUDED
