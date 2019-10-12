@@ -22,7 +22,6 @@ struct longpos player_lpos = {.chunk={0, 0}, .rpos={8, 24, 8}};
 void move_player(Uint32 difftime)
 {
 	char md = get_movement_directions();
-	tlog(5, "movement_directions %i.", (int)md);
 	char x_active = ((md & DIRECTION_LEFT) || (md & DIRECTION_RIGHT)) &&
 		!((md & DIRECTION_LEFT) && (md & DIRECTION_RIGHT));
 	char z_active = ((md & DIRECTION_FORWARD) || (md & DIRECTION_BACKWARD))
@@ -49,7 +48,7 @@ void move_player(Uint32 difftime)
 		player_lpos.rpos[1] -= player_speed * difftime;
 	}
 
-	player_lpos.rpos[2] += difftime * (pz * cos(player_yaw_rad) +
+	player_lpos.rpos[2] += difftime * (pz * cos(player_yaw_rad) -
 			px * sin(player_yaw_rad)) ;
 
 

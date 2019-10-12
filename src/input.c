@@ -24,9 +24,8 @@ extern float looked_at[3];
 
 static void on_direction(char *name, enum keypress kp, void *userdata)
 {
-	zlog(5, "ud %i", (int)userdata);
 	if(kp == KEY_UP) {
-		movement_directions &= !(char)userdata;
+		movement_directions &= ~(char)userdata;
 	} else {
 		movement_directions |= (char)userdata;
 	}
@@ -42,7 +41,7 @@ void init_controls()
 	add_control_key("Up", (control_callback)on_direction,
 			DIRECTION_UP, SDLK_KP_0, KMOD_NONE);
 	add_control_key("Down", (control_callback)on_direction,
-			DIRECTION_DOWN, SDLK_RSHIFT, KMOD_NONE);
+			DIRECTION_DOWN, SDLK_RSHIFT, KMOD_RSHIFT);
 	add_control_key("Forward", (control_callback)on_direction,
 			DIRECTION_FORWARD, SDLK_UP, KMOD_NONE);
 	add_control_key("Backward", (control_callback)on_direction,
@@ -195,10 +194,13 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 			/*tlog(5, "w %i, h %i, iw %i, ih %i", keymod_w, keymod_h,
 			  ig_keymod_w, ig_keymod_h);*/
 
-			if(ig_keymod_w == ig_keymod_h) {
+			if(kevent->type == SDL_KEYUP
+					|| (ig_keymod_w == ig_keymod_h)) {
 				zlog(5, "Found corresponding control for input.");
-				celp->ccb(celp->name, (kevent->type == SDL_KEYDOWN) ?
-						KEY_DOWN : KEY_UP, celp->userdata);
+				celp->ccb(	celp->name,
+						(kevent->type == SDL_KEYDOWN) ?
+						KEY_DOWN : KEY_UP,
+						celp->userdata);
 			}
 		}
 	}
