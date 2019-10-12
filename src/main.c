@@ -54,6 +54,8 @@ void sdldie(const char *msg)
 
 chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
 
+struct event_index_card *ic_reg;
+
 extern struct longpos player_lpos;
 extern float looked_at[3];
 extern char inreach;
@@ -61,15 +63,6 @@ extern char inreach;
 void ontestoption(char *value, void *userdata)
 {
 	SDL_Log("Testvalue = \"%s\"", value);
-}
-
-void ontestbutton(void* userdata)
-{
-	struct event_index_card *ic = userdata;
-	SDL_Log("ACTION");
-	trigger_event(ic, "came from testbutton! xD");
-	//SDL_Quit();
-	//exit(0);
 }
 
 void ontestevent(const struct event_index_card * ic,
@@ -166,10 +159,8 @@ int main(int argc, char *argv[])
 
 	{
 		struct event_index_card ic = {.name = "sys.TEST"};
-		struct event_index_card *ic_reg = register_event(&ic);
+		ic_reg = register_event(&ic);
 		register_event_handler("sys.TEST", ontestevent, "is user data! :)");
-		/*test button*/
-		gui_add_button(-0.5f, -0.5f, 0.5f, 96.0f/480.0f, "TEST", ontestbutton, (void *)ic_reg);
 	}		
 
 	{

@@ -10,6 +10,7 @@
 #include "confconfig.h"
 #include "toolbox.h"
 #include "zimonzk/lists.h"
+#include "menu.h"
 
 #include <SDL2/SDL.h>
 #include <string.h>
@@ -162,11 +163,13 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 					SDL_WarpMouseInWindow(NULL,
 							mouse_reset_pos[0],
 							mouse_reset_pos[1]);
+					build_esc_menu();
 
 				} else {
 					/*TODO onUnpause event*/
 					SDL_GetMouseState(&mouse_reset_pos[0],
 							&mouse_reset_pos[1]);
+					gui_clear();
 				}
 			}
 			break;
