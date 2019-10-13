@@ -30,9 +30,14 @@
 #include "entity.h"
 #include "longpos.h"
 #include "gui.h"
+#include "settings.h"
+#include "plogger.h"
 
 #define ZNEAR 0.1f
 #define ZFAR 10000.0f
+
+#define wheight gamesettings.videosettings.height
+#define wwidth gamesettings.videosettings.width
 
 
 extern struct longpos player_lpos;
@@ -90,7 +95,7 @@ static float model_rotation_axis[3] = {1, 0, 0};
 static float model_position[3] = {0.0, 0.0, 0.0};
 static float camera_center[3] = {0.0, 0.0, 0.0};
 static float up_vector[3] = {0.0, 1.0, 0.0};
-static float fovDeg = 45.0;
+static float fovDeg;
 
 static GLuint VertexArrayID; /* vao */
 static GLuint programID; /* shader */
@@ -134,7 +139,13 @@ void render_init()
 	SDL_Log("#Triangles@world[0][0]: %i", determine_mescha_size(world(0, 0), neig));
 
 	/* This makes our buffer swap syncronized with the monitor's vertical refresh */
-	SDL_GL_SetSwapInterval(1);
+	SDL_GL_SetSwapInterval(gamesettings.videosettings.vsync ? 1 : 0);
+
+	/*set the fov*/
+	fovDeg = gamesettings.videosettings.fov;
+	if((fovDeg > 180.0f) || (fovDeg < 11.25f)) {
+		twarn("Using strange FOV of %f°", fovDeg);
+	}
 
 	for(int x = 0; x < (2*CHUNK_LOADING_RANGE-1); x++) {
 		for(int z = 0; z < (2*CHUNK_LOADING_RANGE-1); z++) {
@@ -310,7 +321,11 @@ void update_view()
 
 void update_projection()
 {
-	perspectiveRH((fovDeg * (float)M_PI)/180.0, 4.0/3.0, ZNEAR, ZFAR, projection); /*now we should have a projection matrix*/
+	perspectiveRH(	(fovDeg * (float)M_PI)/180.0,
+			(float)wwidth/(float)wheight,
+			ZNEAR,
+			ZFAR,
+			projection); /*now we should have a projection matrix*/
 }
 
 void render_looper()
@@ -422,7 +437,7 @@ void render_looper()
 			model_position[2] = CHUNK_LIM_HOR * model_scale *
 				(z + meshindices_base_offset[1] - player_lpos.chunk[1]);
 			//SDL_Log("X: %f, Z: %f", model_position[0], model_position[2]);
-
+			
 			update_model();
 			update_mvp();
 
@@ -480,7 +495,7 @@ void render_looper()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(textureSamplerID_gui, 0);
-	glUniform2f(screen_dimens_id_gui, 640.0f, 480.0f);
+	glUniform2f(screen_dimens_id_gui, wwidth, wheight);
 	glUniform2f(scale_id_gui, 24.0f, 24.0f);
 	glUniform2f(offset_id_gui, 0.0f, 0.0f);
 	glUniform2f(center_id_gui, 0.0f, 0.0f);
@@ -488,7 +503,7 @@ void render_looper()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	/*hotbar*/
 	glUniform1i(textureSamplerID_gui, 0);
-	glUniform2f(screen_dimens_id_gui, 640.0f, 480.0f);
+	glUniform2f(screen_dimens_id_gui, wwidth, wheight);
 	glUniform2f(scale_id_gui, 6*81.0f, 6*10.0f);
 	glUniform2f(offset_id_gui, 0.0f, -1.0f);
 	glUniform2f(center_id_gui, 0.0f, -1.0f);
@@ -509,7 +524,7 @@ int pick_block(float *rrpos)
 	float vcenter[4] = {0.0f, 0.0f, 0.0f, 1.0f}, vresult[4] = {};
 	struct longpos lpos;
 	unsigned int block[3];
-	glReadPixels(320,  240,  1,  1,  GL_DEPTH_COMPONENT,  GL_FLOAT,  &depth);
+	glReadPixels(wwidth/2,  wheight/2,  1,  1,  GL_DEPTH_COMPONENT,  GL_FLOAT,  &depth);
 	//SDL_Log("Depth: %f", depth);
 	vcenter[2] = 2.0f * depth - 1.0f;
 	zLinear = 2.0 * ZNEAR * ZFAR / (ZFAR + ZNEAR - vcenter[2] * (ZFAR - ZNEAR));

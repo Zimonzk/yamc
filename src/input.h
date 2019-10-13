@@ -35,4 +35,7 @@ void handle_mousebutton_event(SDL_MouseButtonEvent* bevent);
 
 char get_movement_directions(void);
 
+void pause_game();
+void unpause_game();
+
 #endif // INPUT_H_INCLUDED

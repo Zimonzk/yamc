@@ -37,6 +37,7 @@
 #include "gui.h"
 #include "event.h"
 #include "toolbox.h"
+#include "settings.h"
 
 #define NUMVERT 36
 
@@ -60,10 +61,6 @@ extern struct longpos player_lpos;
 extern float looked_at[3];
 extern char inreach;
 
-void ontestoption(char *value, void *userdata)
-{
-	SDL_Log("Testvalue = \"%s\"", value);
-}
 
 void ontestevent(const struct event_index_card * ic,
 				void* eventdata, void * userdata)
@@ -100,8 +97,6 @@ int main(int argc, char *argv[])
 	long frame_num = 0;
 	char fpsstr[64];
 
-	struct confstate confstate = {};
-
 	SDL_Window *mainwindow; /* Our window handle */
 	SDL_GLContext maincontext; /* Our opengl context handle */
 
@@ -127,9 +122,18 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+	init_settings();
+
 	/* Create our window centered at 512x512 resolution */
-	mainwindow = SDL_CreateWindow(PROGRAM_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+	mainwindow = SDL_CreateWindow(	PROGRAM_NAME,
+					SDL_WINDOWPOS_CENTERED,
+					SDL_WINDOWPOS_CENTERED,
+					gamesettings.videosettings.width,
+					gamesettings.videosettings.height,
+					SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN |
+					(gamesettings.videosettings.fullscreen ?
+					SDL_WINDOW_FULLSCREEN : 0));
+	
 	if (!mainwindow) /* Die if creation failed */
 		sdldie("Unable to create window");
 
@@ -145,11 +149,6 @@ int main(int argc, char *argv[])
 	top_texi = load_block_texture("textures/blocks/top.png");
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
-
-	conf_register_key(&confstate, "testoption", ontestoption, NULL);
-	if(conf_parse_file(&confstate, "config/options.conf") == CONFCONFIG_ERROR_NOFILE) {
-		sdldie("Invalid config file");
-	}
 
 	init_controls();
 	render_init();
@@ -218,7 +217,7 @@ int main(int argc, char *argv[])
 
 		render_looper();
 
-		render_text("Hello world!", 0.0f, 0.0f);
+		/*render_text("Hello world!", 0.0f, 0.0f);*/
 		snprintf(fpsstr, 64, "%.1f FPS", fps);
 		render_text(fpsstr, -1.0f, 1.0f - (32.0f/480.0f));
 

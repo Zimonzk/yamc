@@ -17,11 +17,32 @@
 
 static char movement_directions = 0;
 static SDL_bool game_pause = SDL_FALSE;
+static int mouse_reset_pos[2] = {0, 0};
+
 static arraylist controls;
 
 extern char inreach;
 extern struct longpos player_lpos;
 extern float looked_at[3];
+
+void pause_game()
+{
+	game_pause = 1;
+	SDL_SetRelativeMouseMode(!game_pause);
+	/*TODO onPause event*/
+	SDL_WarpMouseInWindow(NULL, mouse_reset_pos[0], mouse_reset_pos[1]);
+	build_esc_menu();
+}
+
+void unpause_game()
+{
+	game_pause = 0;
+	SDL_SetRelativeMouseMode(!game_pause);
+	/*TODO onUnpause event*/
+	SDL_GetMouseState(&mouse_reset_pos[0], &mouse_reset_pos[1]);
+	gui_clear();
+
+}
 
 static void on_direction(char *name, enum keypress kp, void *userdata)
 {
@@ -79,23 +100,14 @@ void add_control_key(char * name, control_callback ccb, void *userdata,
 	if(key_mod == 0 || key_key == 0) {
 		yamc_terminate(ENOMEM, "Failed to allocate memory.");
 	}
-	tlog(5, "a0");
 	sprintf(key_key, "%s%s", name, "_key");
-	tlog(5, "a1");
 	sprintf(key_mod, "%s%s", name, "_mod");
-	tlog(5, "a2");
 	conf_register_key(&keyconfig, key_key, (key_callback)kkcb, &val_key);
-	tlog(5, "a3");
 	conf_register_key(&keyconfig, key_mod, (key_callback)kmcb, &val_mod);
-	tlog(5, "a4");
 
 	conf_parse_file(&keyconfig, "config/controls.conf");
 
-	tlog(5, "a5");
-
 	conf_destroy_state(&keyconfig);
-
-	tlog(5, "a6");
 
 
 	if(val_key != 0) {
@@ -152,24 +164,13 @@ void add_control_key(char * name, control_callback ccb, void *userdata,
 
 void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 {
-	static int mouse_reset_pos[2] = {0, 0};
 	switch(kevent->keysym.sym) {
 		case SDLK_ESCAPE:
 			if(kevent->type == SDL_KEYDOWN) {
-				game_pause = !game_pause;
-				SDL_SetRelativeMouseMode(!game_pause);
 				if(game_pause) {
-					/*TODO onPause event*/
-					SDL_WarpMouseInWindow(NULL,
-							mouse_reset_pos[0],
-							mouse_reset_pos[1]);
-					build_esc_menu();
-
+					unpause_game();
 				} else {
-					/*TODO onUnpause event*/
-					SDL_GetMouseState(&mouse_reset_pos[0],
-							&mouse_reset_pos[1]);
-					gui_clear();
+					pause_game();
 				}
 			}
 			break;

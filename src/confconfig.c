@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "plogger.h"
 
 int conf_register_key(struct confstate *cs, char *key, key_callback kcb, void *userdata)
 {
@@ -28,13 +29,25 @@ int conf_parse_file(struct confstate *cs, char *path)
 {
 	FILE *conffile;
 	char *key, *value;
+	int assigned;
 
 	conffile = fopen(path, "r");
 	if(conffile == 0) {
 		return CONFCONFIG_ERROR_NOFILE;
 	}
 
-	while(fscanf(conffile, " %m[^ =] = %m[^\n]", &key, &value) != EOF) {
+	while((assigned = fscanf(conffile, " %m[^ \n\t\f\r\v=] = %m[^\n]", &key, &value))
+		       	!= EOF) {
+		if(assigned == 0) {
+			tlog(5, "skipping beause no match");
+			continue;
+		}
+		if(assigned == 1) {
+			tlog(5, "skipping because only one match");
+			free(key);
+			continue;
+		}
+		/*tlog(5, "read %s, %s", key, value);*/
 		for(int i = 0; i < cs->keys.used_units; i++) {
 			key_callback kcb = *(key_callback *)arraylist_get(&cs->key_callbacks, i);
 			if(strcmp(key, *(char **)arraylist_get(&cs->keys, i)) == 0) {

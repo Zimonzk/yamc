@@ -2,11 +2,9 @@
 #ifndef __PLOGGER_H_INCLUDED__
 #define __PLOGGER_H_INCLUDED__
 
-#define _GNU_SOURCE
-
 #include <stdarg.h>
 #include <unistd.h>
-#include <sys/syscall.h>
+#include <SDL2/SDL.h>
 #include <pthread.h>
 #include "zimonzk/logger.h"
 
@@ -18,23 +16,23 @@ extern pthread_mutex_t logging_mutex;
 	pthread_mutex_unlock(&logging_mutex);
 
 #define tlog(verbosity, fmt, ...){\
-	pid_t tid = syscall(SYS_gettid);\
+	SDL_threadID tid = SDL_GetThreadID(NULL);\
 	pthread_mutex_lock(&logging_mutex);\
-	printf("\x1B[1;35m#%u \x1B[0m", tid);\
+	printf("\x1B[1;35m#%lX \x1B[0m", tid);\
 	zlog(verbosity, fmt, ##__VA_ARGS__);\
 	pthread_mutex_unlock(&logging_mutex);}
 
 #define twarn(fmt, ...){\
-	pid_t tid = syscall(SYS_gettid);\
+	SDL_threadID tid = SDL_GetThreadID(NULL);\
 	pthread_mutex_lock(&logging_mutex);\
-	printf("\x1B[1;35m#%u \x1B[0m", tid);\
+	printf("\x1B[1;35m#%lX \x1B[0m", tid);\
 	warn(fmt, ##__VA_ARGS__);\
 	pthread_mutex_unlock(&logging_mutex);}
 
 #define terror(fmt, ...){\
-	pid_t tid = syscall(SYS_gettid);\
+	SDL_threadID tid = SDL_GetThreadID(NULL);\
 	pthread_mutex_lock(&logging_mutex);\
-	fprintf(stderr, "\x1B[1;35m#%u \x1B[0m", tid);\
+	fprintf(stderr, "\x1B[1;35m#%lX \x1B[0m", tid);\
 	error(fmt, ##__VA_ARGS__);\
 	pthread_mutex_unlock(&logging_mutex);}
 

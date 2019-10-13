@@ -19,9 +19,11 @@
 #include "zimonzk/lists.h"
 #include "texture.h"
 #include "shader.h"
+#include "settings.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+
+#define wheight gamesettings.videosettings.height
+#define wwidth gamesettings.videosettings.width
 
 static GLuint textureID_font;
 static GLuint vb_text;
@@ -111,7 +113,7 @@ void render_text(char *str, float x, float y) /* x, y openGL coordinates
 	glUniform4f(uniformID_textcolor, 1.0f, 1.0f, 1.0f, 1.0f);
 	//SDL_Log("%i", glGetError());
 
-	glUniform2f(uniformID_size, 32.0f/640.0f, 32.0f/480.0f);
+	glUniform2f(uniformID_size, 32.0f/wwidth, 32.0f/wheight);
 	//SDL_Log("%i", glGetError());
 
 
