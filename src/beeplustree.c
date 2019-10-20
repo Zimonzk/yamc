@@ -8,22 +8,6 @@
 #include "zimonzk/lists.h"
 #include "toolbox.h"
 
-int beept_init(struct beept *bpt, char *path)
-{
-	if((bpt->f = fopen64(path, "r+b")) == 0) {
-		return -1;
-	}
-
-	/* if the file is empty, place the root node */
-
-	return 0;
-}
-
-void beept_close(struct beept *bpt)
-{
-	fclose(bpt->f);
-	memset(bpt, 0, sizeof(struct beept));
-}
 
 static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		uint64_t rval[2], off64_t chld,
@@ -38,6 +22,36 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno);
 
 
 
+
+int beept_init(struct beept *bpt, char *path)
+{
+	if((bpt->f = fopen64(path, "r+b")) == 0) {
+		return -1;
+	}
+
+	if(fseeko64(bpt->f, SEEK_END, 0) == 0) {
+		/* if the file is empty, place the root node */
+		/* also link to one empty child node 
+		 * (this should work in our implementation) */
+		struct bpt_node root, chld;
+		root.is_leaf = 0;
+		root.nrval = 0;
+		root.children = 755;
+
+		chld.is_leaf = 1;
+		chld.nrval = 0;
+
+		bpt_node_to_disk(bpt, &root, 0);
+		bpt_node_to_disk(bpt, &chld, 755);
+	}
+	return 0;
+}
+
+void beept_close(struct beept *bpt)
+{
+	fclose(bpt->f);
+	memset(bpt, 0, sizeof(struct beept));
+}
 
 static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		uint64_t rval[2], off64_t chld,
@@ -75,7 +89,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 
 
 	/* if we are in a non-leaf the last router value becomes useless in the
-	 * current node, since the last child must not have a router value.
+	 * currenODO think about how the chidren get inserted here t node, since the last child must not have a router value.
 	 * becuse of this we have to move that router value up to the parent. 
 	 * this also allows us to properly link to our old, now halved, node
 	 * which of course should be linked to by its old highest router value
@@ -97,7 +111,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		/* we are in the root node */
 		/* in this case we have to split it into two entirely new nodes
 		 * and only link to those from the root. */
-		
+
 		/* at this point we already have split off one new node and put
 		 * the values in. so we only create one more node and copy the
 		 * content of the current root into it.
@@ -126,7 +140,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 	} else {
 		/* write original changed node back to disk */
 		bpt_node_to_disk(bpt, cno, *(off64_t *)arraylist_get(path, 
-				path->used_units-1));
+					path->used_units-1));
 
 		/* go back in path */
 		arraylist_del_element(path, path->used_units-1);
@@ -334,10 +348,13 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 				}
 			}
 			/* all keys are bigger than the new key
-			 * THIS SHOULD NEVER HAPPEN */
-			yamc_terminate(-123, "Reached forbidden part in code."
-					" Possibly broken beeplustree file.");
+			 * add new key at the end
+			 * the only time we should be getting here is when
+			 * adding the new highest key of the tree */
+			node_insert(bpt, key, value, cno->nrval, &path);
 
+			arraylist_delete(&path);
+			return 0;
 		} else {
 			/* search for router value, that is bigger than or equal
 			 * to key */
