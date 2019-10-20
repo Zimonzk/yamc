@@ -200,7 +200,7 @@ void handle_keyboard_event(SDL_KeyboardEvent* kevent)
 
 			if(kevent->type == SDL_KEYUP
 					|| (ig_keymod_w == ig_keymod_h)) {
-				zlog(5, "Found corresponding control for input.");
+				tlog(6, "Found corresponding control for input.");
 				celp->ccb(	celp->name,
 						(kevent->type == SDL_KEYDOWN) ?
 						KEY_DOWN : KEY_UP,
@@ -235,10 +235,10 @@ void handle_mousebutton_event(SDL_MouseButtonEvent* bevent)
 					mchunk->data[(int)lpos.rpos[0]][(int)lpos.rpos[1]][(int)lpos.rpos[2]].properties = 0;
 					/* TODO check if the chunk is loaded (has mesh) */
 					update_mesh_abs(lpos.chunk[0], lpos.chunk[1]);
-					SDL_Log("CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
-					SDL_Log("~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
+					tlog(6, "CLICK! %f|%f|%f", looked_at[0], looked_at[1], looked_at[2]);
+					tlog(6, "~~~~~~ %i|%i|%i", (int)floor(looked_at[0]), (int)looked_at[1], (int)floor(looked_at[2]));
 				} else {
-					SDL_Log("Not looking at a block in reach or game paused.");
+					tlog(6, "Not looking at a block in reach or game paused.");
 				}
 			} else {
 				/*button released*/

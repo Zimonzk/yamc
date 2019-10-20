@@ -9,18 +9,21 @@
 #include "zimonzk/logger.h"
 
 extern pthread_mutex_t logging_mutex;
+extern int global_verbosity;
 
 #define tset_verbosity(verbosity)\
 	pthread_mutex_lock(&logging_mutex);\
 	set_verbosity(verbosity);\
 	pthread_mutex_unlock(&logging_mutex);
 
-#define tlog(verbosity, fmt, ...){\
-	SDL_threadID tid = SDL_GetThreadID(NULL);\
-	pthread_mutex_lock(&logging_mutex);\
-	printf("\x1B[1;35m#%lX \x1B[0m", tid);\
-	zlog(verbosity, fmt, ##__VA_ARGS__);\
-	pthread_mutex_unlock(&logging_mutex);}
+#define tlog(verbosity, fmt, ...) \
+	if(global_verbosity >= verbosity) { \
+		SDL_threadID tid = SDL_GetThreadID(NULL);\
+		pthread_mutex_lock(&logging_mutex);\
+		printf("\x1B[1;35m#%lX \x1B[0m", tid);\
+		zlog(verbosity, fmt, ##__VA_ARGS__);\
+		pthread_mutex_unlock(&logging_mutex); \
+	}
 
 #define twarn(fmt, ...){\
 	SDL_threadID tid = SDL_GetThreadID(NULL);\
