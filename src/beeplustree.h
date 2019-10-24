@@ -2,9 +2,13 @@
 #define __BEEPLUSTREE_H_INCLUDED__
 
 #define _FILE_OFFSET_BITS 64
+#ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
+#endif
 
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 
 
 #include <sys/types.h>
@@ -31,7 +35,7 @@ struct beept {
 };
 
 
-int bpt_init(struct beept *bpt, char *path);
+int beept_init(struct beept *bpt, char *path);
 void beept_close(struct beept *bpt);
 
 uint64_t 	bpt_get(struct beept *bpt, uint64_t key[2]);

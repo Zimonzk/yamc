@@ -38,6 +38,7 @@
 #include "event.h"
 #include "toolbox.h"
 #include "settings.h"
+#include "beeplustree.h"
 
 #define NUMVERT 36
 
@@ -102,6 +103,9 @@ int main(int argc, char *argv[])
 
 	unsigned int side_texi, top_texi;
 
+	struct beept testbee = {};
+	uint64_t testbeek[2] = {(uint64_t) 11L, (uint64_t) 777L};
+
 	tset_verbosity(5);
 	tlog(5, "Verbosity set to 5.");
 
@@ -149,6 +153,14 @@ int main(int argc, char *argv[])
 	top_texi = load_block_texture("textures/blocks/top.png");
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
+
+	{
+		int t = beept_init(&testbee, "test.beept");
+		tlog(5, "Beept init %i", t);
+		t = bpt_add(&testbee, testbeek, (uint64_t)1337L);
+		tlog(5, "bpt add %i", t);
+	}
+	beept_close(&testbee);
 
 	init_controls();
 	render_init();
