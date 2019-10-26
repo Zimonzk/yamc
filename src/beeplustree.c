@@ -38,7 +38,7 @@ int beept_init(struct beept *bpt, char *path)
 		/* if the file is empty, place the root node */
 		/* also link to one empty child node 
 		 * (this should work in our implementation) */
-		struct bpt_node root, chld;
+		struct bpt_node root = {}, chld = {};
 		root.is_leaf = 0;
 		root.nrval = 0;
 		root.children[0] = 755;
@@ -96,7 +96,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 
 
 	/* if we are in a non-leaf the last router value becomes useless in the
-	 * currenODO think about how the chidren get inserted here t node, since the last child must not have a router value.
+	 * current node, since the last child must not have a router value.
 	 * becuse of this we have to move that router value up to the parent. 
 	 * this also allows us to properly link to our old, now halved, node
 	 * which of course should be linked to by its old highest router value
@@ -127,7 +127,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		 * after that we change the current root to only contain the
 		 * links to the two new nodes. */
 		off64_t nodeo2;
-		struct bpt_node newroot;
+		struct bpt_node newroot = {};
 
 		/* write to disk */
 		fseeko64(bpt->f, 0, SEEK_END);
@@ -145,18 +145,26 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		bpt_node_to_disk(bpt, &newroot, 0);
 
 	} else {
+		off64_t poff;
 		/* write original changed node back to disk */
 		bpt_node_to_disk(bpt, cno, *(off64_t *)arraylist_get(path, 
 					path->used_units-1));
 
 		/* go back in path */
 		arraylist_del_element(path, path->used_units-1);
-		/* read the parent node */
-		fseeko64(bpt->f, *(off64_t*)arraylist_get(path,
-					path->used_units-1), SEEK_SET);
+
+		if(path->used_units == 0) {
+		/* our parent is the root node (which is not in path so
+		 * we use its known address: 0)*/
+			poff = 0;
+		} else {
+			/* read the parent node */
+			poff = *(off64_t*) arraylist_get(path,
+					path->used_units-1);
+		}
+		fseeko64(bpt->f, poff, SEEK_SET);
 		bpt_node_from_disk_here(bpt, &parent);
 
-		/* node has space */
 		/* insert router value */
 		for(int i = 0; i < parent.nrval; i++) {
 			if(xz_greater(parent.rvals[i], newrval)) {
@@ -164,12 +172,16 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 					/* node full */
 					bpt_split_node(bpt, &parent, newrval,
 							nodeo, path, i, 0);
+					/* split already saves all nodes */
 				} else {
 					/* node has space */
 					bpt_place_and_shift_down(&parent,
 							newrval,
 							nodeo,
 							i);
+					/* in this case, the node also needs
+					 * to be written back here */
+					bpt_node_to_disk(bpt, &parent, poff);
 				}
 			}
 		}
@@ -185,6 +197,8 @@ static void node_insert(struct beept *bpt, uint64_t rval[2], off64_t chld, int i
 	if(cno->nrval < 31) {
 		/* there is space left in node */
 
+		tlog(6, "has space");
+
 		bpt_place_and_shift_down(cno, rval, chld, i);
 
 		/* write the node back to the disk */
@@ -192,6 +206,7 @@ static void node_insert(struct beept *bpt, uint64_t rval[2], off64_t chld, int i
 					path->used_units-1));
 	} else {
 		/* no space left in node */
+		tlog(6, "has no space");
 		/* split node */
 		bpt_split_node(bpt, cno, rval, chld, path, i, 1);
 	}
@@ -204,22 +219,29 @@ static void bpt_place_and_shift_down(struct bpt_node *cno,
 	off64_t tempc;
 
 	for(int j = i; j < cno->nrval; j++) {
+		/* backup current */
 		memcpy(tempr, cno->rvals[j], 2*8);
 		tempc = cno->children[j];
 
+		/* add new */
 		memcpy(cno->rvals[j], rval, 2*8);
 		cno->children[j] = chld;
 
+		/* make backup into "new" */
 		memcpy(rval, tempr, 2*8);
 		chld = tempc;
 	}
+	/* backup extra child for nonleafs */
 	tempc = cno->children[cno->nrval];
 
+	/* put "new" into new last place */
 	memcpy(cno->rvals[cno->nrval], rval, 2*8);
 	cno->children[cno->nrval] = chld;
 
+	/* update used values count */
 	cno->nrval++;
 
+	/* also put the extra child into the new place */
 	cno->children[cno->nrval] = tempc;
 }
 
@@ -229,12 +251,11 @@ static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
 	uint8_t data[755];
 	fseeko64(bpt->f, addr, SEEK_SET);
 
-	memcpy(data, &cno->is_leaf, 1);
+	data[0] = cno->is_leaf;
+	tlog(6, "is leaf? %i", cno->is_leaf);
 
 	cno->nrval = htole16(cno->nrval);
 	memcpy(data+1, &cno->nrval, 2);
-
-	tlog(5, "frf %i", *(uint8_t *)(data+1));
 
 	for(int i = 0; i < 31; i++) {
 		cno->rvals[i][0] = htole64(cno->rvals[i][0]);
@@ -245,9 +266,9 @@ static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
 	for(int i = 0; i < 32; i++) {
 		cno->children[i] = htole64(cno->children[i]);
 	}
-	memcpy(data+2*31*8, &cno->children, 32*8);
+	memcpy(data+3+2*31*8, &cno->children, 32*8);
 
-	tlog(5, "written");
+	tlog(6, "write at %lli", addr);
 	if(fwrite(data, sizeof(data), 1, bpt->f) != 1) {
 		yamc_terminate(-124, "Could not write to beeplustree.");
 	}
@@ -262,17 +283,11 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno)
 				"Could not read a node from a beeplustree.");
 	}
 
-	memcpy(&cno->is_leaf, data, 1);
+	cno->is_leaf = data[0];
 
 	memcpy(&cno->nrval, data+1, 2);
 
-	tlog(5, "DGRD %i", *(uint8_t *)(data+1));
-
-	tlog(5, "lololo %i", cno->nrval);
-
 	cno->nrval = le16toh(cno->nrval);
-
-	tlog(5, "ololol %i", cno->nrval);
 
 	memcpy(&cno->rvals, data+3, 2*31*8);
 	for(int i = 0; i < 31; i++) {
@@ -280,7 +295,7 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno)
 		cno->rvals[i][1] = le64toh(cno->rvals[i][1]);
 	}
 
-	memcpy(&cno->children, data+2*31*8, 32*8);
+	memcpy(&cno->children, data+3+2*31*8, 32*8);
 	for(int i = 0; i < 32; i++) {
 		cno->children[i] = le64toh(cno->children[i]);
 	}
@@ -299,15 +314,22 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 		if(cno->is_leaf) {
 			/* search for match */
 			for(int i = 0; i < cno->nrval; i++) {
+				tlog(6, "i %i, nrval %i, rval %lli %lli, key %lli %lli",
+						i, cno->nrval,
+						cno->rvals[i][0], cno->rvals[i][1],
+						key[0], key[1]);
 				if(xz_equal(cno->rvals[i], key)) {
 					/* In a leaf child nr. X is the value
 					 * to key nr. X.
 					 * That mens that the last possible
 					 * child in a leaf, although it is
 					 * stored on disk has no meaning. */
+					tlog(6, "key found");
 					return cno->children[i];
 				}
 			}
+
+			tlog(6, "key not found");
 
 			return 0; /*key nonexistent*/
 		} else {
@@ -315,12 +337,15 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 			 * to key */
 			off64_t n = cno->nrval;
 			for(int i = 0; i < cno->nrval; i++) {
+				tlog(6, "rval #%i is %lli %lli", i, cno->rvals[0], cno->rvals[1]);
 				if(xz_greater(cno->rvals[i], key) ||
 						xz_equal(cno->rvals[i], key)) {
+					tlog(6, "rval matches key %lli %lli", key[0], key[1]);
 					n = i;
 					break;
 				}
 			}
+			tlog(6, "going to node at %lli", cno->children[n]);
 			fseeko64(bpt->f, cno->children[n], SEEK_SET);
 		}
 	}
@@ -342,32 +367,29 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 		bpt_node_from_disk_here(bpt, cno);
 
 		if(cno->is_leaf) {
-			uint64_t match = 0;
 			/* search for match */
 			for(int i = 0; i < cno->nrval; i++) {
 				if(xz_equal(cno->rvals[i], key)) {
-					/* In a leaf child nr. X is the value
-					 * to key nr. X.
-					 * That mens that the last possible
-					 * child in a leaf, although it is
-					 * stored on disk has no meaning. */
-					match = cno->children[i];
+					/*key exists, can't add.*/
 					arraylist_delete(&path);
-					return -1; /*key exists, can't add.*/
+					return -1;
 				}
-				if(xz_greater(key, cno->rvals[i])) {
+				if(xz_greater(cno->rvals[i], key)) {
 					/* found the place where the new key
 					 * belongs */
+					tlog(6, "adding nonlast");
 					node_insert(bpt, key, value, i, &path);
 
 					arraylist_delete(&path);
 					return 0;
 				}
 			}
-			/* all keys are bigger than the new key
+			/* all keys are smaller than the new key
 			 * add new key at the end
 			 * the only time we should be getting here is when
 			 * adding the new highest key of the tree */
+			tlog(6, "adding last");
+
 			node_insert(bpt, key, value, cno->nrval, &path);
 
 			arraylist_delete(&path);
@@ -383,8 +405,6 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 					break;
 				}
 			}
-					
-			tlog(5, "olaosk %lli", cno->children[n]);
 
 			fseeko64(bpt->f, cno->children[n], SEEK_SET);
 			arraylist_append(&path, &cno->children[n]);

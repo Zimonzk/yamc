@@ -106,8 +106,8 @@ int main(int argc, char *argv[])
 	struct beept testbee = {};
 	uint64_t testbeek[2] = {(uint64_t) 11L, (uint64_t) 777L};
 
-	tset_verbosity(5);
-	tlog(5, "Verbosity set to 5.");
+	tset_verbosity(6);
+	tlog(5, "Verbosity set to %i.", global_verbosity);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
 		sdldie("Unable to initialize SDL"); /* Or die on error */
@@ -155,10 +155,54 @@ int main(int argc, char *argv[])
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
 	{
+#define ITERR 100LL
 		int t = beept_init(&testbee, "test.beept");
+		uint64_t v = 0;
 		tlog(5, "Beept init %i", t);
-		t = bpt_add(&testbee, testbeek, (uint64_t)1337L);
-		tlog(5, "bpt add %i", t);
+		for(uint64_t ui = 0; ui < ITERR; ui += 2) {
+			testbeek[0] = ui;
+			for(uint64_t uiui = 0; uiui < ITERR; uiui += 2) {
+				testbeek[1] = uiui;
+				
+				tlog(6, "addcount %i", (ui*ITERR + uiui)/2);	
+				fflush(stdout);
+
+				t = bpt_add(&testbee, testbeek, ui ^ uiui);
+				if(t != 0) {
+					yamc_terminate(-665, "error adding");
+				}
+			}
+		}
+		tlog(5, "Bee insert done.");
+		for(uint64_t ui = 0; ui < ITERR; ui += 2) {
+			testbeek[0] = ui;
+			for(uint64_t uiui = 0; uiui < ITERR; uiui += 2) {
+				tlog(6, "rereading %lli", (uiui + ITERR*ui)/2);
+				testbeek[1] = uiui;
+				v = bpt_get(&testbee, testbeek);
+				if(v != (ui ^ uiui)) {
+					terror("v %lli", v);
+					yamc_terminate(-664, "error reading");
+				}
+				testbeek[1] = uiui + 1;
+				v = bpt_get(&testbee, testbeek);
+				if(v != 0) {
+					yamc_terminate(-663, "unallowed z key");	
+				}
+				testbeek[0] = ui + 1;
+				v = bpt_get(&testbee, testbeek);
+				if(v != 0) {
+					yamc_terminate(-663, "unallowed xz key");	
+				}
+				testbeek[1] = uiui;
+				v = bpt_get(&testbee, testbeek);
+				if(v != 0) {
+					yamc_terminate(-663, "unallowed x key");	
+				}
+				testbeek[0] = ui;
+			}
+		}
+		tlog(5, "Bee check done.");
 	}
 	beept_close(&testbee);
 
