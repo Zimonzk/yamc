@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 
 	Uint32 lastticks = 0, thisticks = 0, difftime = 0;
 	Uint32 fpsticks = 0, fpslastticks = 0;
+	uint32_t testticks = 0;
 	float fps = 0;
 	long frame_num = 0;
 	char fpsstr[64];
@@ -106,7 +107,7 @@ int main(int argc, char *argv[])
 	struct beept testbee = {};
 	uint64_t testbeek[2] = {(uint64_t) 11L, (uint64_t) 777L};
 
-	tset_verbosity(6);
+	tset_verbosity(5);
 	tlog(5, "Verbosity set to %i.", global_verbosity);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) { /* Initialize SDL's Video subsystem */
@@ -154,17 +155,20 @@ int main(int argc, char *argv[])
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
+	testticks = SDL_GetTicks();
 	{
-#define ITERR 100LL
+#define ITERR 2000LL
 		int t = beept_init(&testbee, "test.beept");
+		tlog(5, "bpt inited. took %li ms.", SDL_GetTicks() - testticks);
+		testticks = SDL_GetTicks();
 		uint64_t v = 0;
 		tlog(5, "Beept init %i", t);
-		for(uint64_t ui = 0; ui < ITERR; ui += 2) {
+		for(uint64_t ui = ITERR - 2; ui >= 0; ui -= 2) {
 			testbeek[0] = ui;
-			for(uint64_t uiui = 0; uiui < ITERR; uiui += 2) {
+			for(uint64_t uiui = ITERR - 2; uiui >= 0; uiui -= 2) {
 				testbeek[1] = uiui;
 				
-				tlog(6, "addcount %i", (ui*ITERR + uiui)/2);	
+				tlog(6, "addcount %i", 1+(ui*ITERR/2 + uiui)/2);	
 				fflush(stdout);
 
 				t = bpt_add(&testbee, testbeek, ui ^ uiui);
@@ -173,11 +177,13 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		tlog(5, "Bee insert done.");
-		for(uint64_t ui = 0; ui < ITERR; ui += 2) {
+		tlog(5, "Bee insert done. took %li ms", SDL_GetTicks() - testticks);
+		testticks = SDL_GetTicks();
+
+		for(uint64_t ui = ITERR - 2; ui >= 0; ui -= 2) {
 			testbeek[0] = ui;
-			for(uint64_t uiui = 0; uiui < ITERR; uiui += 2) {
-				tlog(6, "rereading %lli", (uiui + ITERR*ui)/2);
+			for(uint64_t uiui = ITERR - 2; uiui >= 0; uiui -= 2) {
+				tlog(6, "rereading %lli", (uiui + ITERR*ui/2)/2);
 				testbeek[1] = uiui;
 				v = bpt_get(&testbee, testbeek);
 				if(v != (ui ^ uiui)) {
@@ -202,7 +208,7 @@ int main(int argc, char *argv[])
 				testbeek[0] = ui;
 			}
 		}
-		tlog(5, "Bee check done.");
+		tlog(5, "Bee check done. took %li ms", SDL_GetTicks() - testticks);
 	}
 	beept_close(&testbee);
 

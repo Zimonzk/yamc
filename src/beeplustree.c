@@ -26,7 +26,7 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno);
 int beept_init(struct beept *bpt, char *path)
 {
 	if((bpt->f = fopen64(path, "r+b")) == 0) {
-		tlog(5, "PEPP");
+		tlog(6, "PEPP");
 		if((bpt->f = fopen64(path, "w+b")) == 0) {
 			return -1;
 		}
@@ -46,7 +46,7 @@ int beept_init(struct beept *bpt, char *path)
 		chld.is_leaf = 1;
 		chld.nrval = 0;
 
-		tlog(5, "meeppp");
+		tlog(6, "meeppp");
 
 		bpt_node_to_disk(bpt, &root, 0);
 		bpt_node_to_disk(bpt, &chld, 755);
@@ -67,6 +67,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 	/* allocate new node */
 	off64_t nodeo;
 	struct bpt_node newnode = {}, parent = {};
+	/* newnode.children[15] = 1337LL; */
 	uint64_t newrval[2];
 	newnode.is_leaf = is_leaf;
 
@@ -81,14 +82,16 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		newnode.nrval = 16;
 	}
 
-	/*TODO something about extra router value that goes to the parent*/
 	/* move second half of keys and values */
-	memcpy(newnode.rvals, cno->rvals+(2*(31-newnode.nrval)), 2*8*newnode.nrval);
-	memcpy(newnode.children, cno->children+31-newnode.nrval, 8*newnode.nrval);
+	memcpy(newnode.rvals, cno->rvals[31-newnode.nrval], 2*8*newnode.nrval);
+	tlog(6, "first router value will be %lli %lli", newnode.rvals[0][0], newnode.rvals[0][1]);
+	memcpy(newnode.children, &cno->children[31-newnode.nrval], 8*(newnode.nrval+1));
 	cno->nrval = 31 - newnode.nrval;
 
 	/* place key and value and shift down */
 	if(i > 16) {
+		tlog(6, "placing new rval %lli %lli and child %lli in new node at i %i",
+			       rval[0], rval[1], chld, i-(31-newnode.nrval));	
 		bpt_place_and_shift_down(&newnode, rval, chld, i-(31-newnode.nrval));
 	} else {
 		bpt_place_and_shift_down(cno, rval, chld, i);
@@ -102,6 +105,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 	 * which of course should be linked to by its old highest router value
 	 * which again is the one we have to move anyways. */
 	memcpy(newrval, cno->rvals[cno->nrval-1], 2*8);
+	tlog(6, "newrval is %lli %lli", newrval[0], newrval[1]);
 	if(newnode.is_leaf == 0)
 	{
 		cno->nrval--;
@@ -109,9 +113,10 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 	/* otherwise we only copy the "rval" that is actually a key
 	 * into the parent. */
 
-
 	/* write new node to disk */
 	bpt_node_to_disk(bpt, &newnode, nodeo);
+
+	tlog(6, "path used units %lu", path->used_units);
 
 	/* update the parent */
 	if(path->used_units == 0) {
@@ -128,6 +133,8 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		 * links to the two new nodes. */
 		off64_t nodeo2;
 		struct bpt_node newroot = {};
+
+		tlog(5, "splitting root");
 
 		/* write to disk */
 		fseeko64(bpt->f, 0, SEEK_END);
@@ -156,6 +163,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		if(path->used_units == 0) {
 		/* our parent is the root node (which is not in path so
 		 * we use its known address: 0)*/
+			tlog(6, "parent is root");
 			poff = 0;
 		} else {
 			/* read the parent node */
@@ -165,14 +173,18 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		fseeko64(bpt->f, poff, SEEK_SET);
 		bpt_node_from_disk_here(bpt, &parent);
 
+		tlog(6, "the parent has %i router values", parent.nrval);
+
 		/* insert router value */
 		for(int i = 0; i < parent.nrval; i++) {
 			if(xz_greater(parent.rvals[i], newrval)) {
 				if(parent.nrval == 31) {
+					tlog(6, "the parent node is full");
 					/* node full */
 					bpt_split_node(bpt, &parent, newrval,
 							nodeo, path, i, 0);
 					/* split already saves all nodes */
+					return;
 				} else {
 					/* node has space */
 					bpt_place_and_shift_down(&parent,
@@ -180,10 +192,29 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 							nodeo,
 							i);
 					/* in this case, the node also needs
-					 * to be written back here */
+					 * to be written back */
 					bpt_node_to_disk(bpt, &parent, poff);
+					return;
 				}
 			}
+		}
+		/* TODO clean this and simmilat loop constructs up
+		 * so that the body ist not repeatet bekow the loop itself.
+		 * somehow put that case also into the loop. */
+		tlog(6, "newrval now is %lli %lli", newrval[0], newrval[1]);
+		/* no router values yet, or all values were smaller */
+		if(parent.nrval == 31) {
+			/* node full */
+			tlog(6, "the parent node is full");
+
+			bpt_split_node(bpt, &parent, 
+					newrval, nodeo, path, parent.nrval, 0);
+
+		} else {
+		bpt_place_and_shift_down(&parent, newrval, nodeo, parent.nrval);
+		/* in this case, the node also needs
+		 * to be written back */
+		bpt_node_to_disk(bpt, &parent, poff);
 		}
 	}
 
@@ -221,28 +252,25 @@ static void bpt_place_and_shift_down(struct bpt_node *cno,
 	for(int j = i; j < cno->nrval; j++) {
 		/* backup current */
 		memcpy(tempr, cno->rvals[j], 2*8);
-		tempc = cno->children[j];
+		/* in leaves, the value is at the index f the key.
+		 * otherwise the router value goes in the next child slot */
+		tempc = cno->children[j+(cno->is_leaf ? 0 : 1)];
 
 		/* add new */
 		memcpy(cno->rvals[j], rval, 2*8);
-		cno->children[j] = chld;
+		cno->children[j+(cno->is_leaf ? 0 : 1)] = chld;
 
 		/* make backup into "new" */
 		memcpy(rval, tempr, 2*8);
 		chld = tempc;
 	}
-	/* backup extra child for nonleafs */
-	tempc = cno->children[cno->nrval];
-
 	/* put "new" into new last place */
 	memcpy(cno->rvals[cno->nrval], rval, 2*8);
-	cno->children[cno->nrval] = chld;
+	tlog(6, "wrote last rval of %lli %lli", cno->rvals[cno->nrval][0], cno->rvals[cno->nrval][1]);
+	cno->children[cno->nrval+(cno->is_leaf ? 0 : 1)] = chld;
 
 	/* update used values count */
 	cno->nrval++;
-
-	/* also put the extra child into the new place */
-	cno->children[cno->nrval] = tempc;
 }
 
 static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
@@ -268,7 +296,7 @@ static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
 	}
 	memcpy(data+3+2*31*8, &cno->children, 32*8);
 
-	tlog(6, "write at %lli", addr);
+	tlog(6, "write at %llx", addr);
 	if(fwrite(data, sizeof(data), 1, bpt->f) != 1) {
 		yamc_terminate(-124, "Could not write to beeplustree.");
 	}
@@ -294,6 +322,7 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno)
 		cno->rvals[i][0] = le64toh(cno->rvals[i][0]);
 		cno->rvals[i][1] = le64toh(cno->rvals[i][1]);
 	}
+	tlog(6, "first rval read %lli %lli", cno->rvals[0][0], cno->rvals[0][1]);
 
 	memcpy(&cno->children, data+3+2*31*8, 32*8);
 	for(int i = 0; i < 32; i++) {
@@ -313,11 +342,11 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 
 		if(cno->is_leaf) {
 			/* search for match */
+			tlog(6, "leaf searching key for %lli %lli", key[0], key[1]);
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "i %i, nrval %i, rval %lli %lli, key %lli %lli",
-						i, cno->nrval,
-						cno->rvals[i][0], cno->rvals[i][1],
-						key[0], key[1]);
+				tlog(6, "rval %lli %lli",
+						cno->rvals[i][0],
+						cno->rvals[i][1]);
 				if(xz_equal(cno->rvals[i], key)) {
 					/* In a leaf child nr. X is the value
 					 * to key nr. X.
@@ -335,17 +364,22 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 		} else {
 			/* search for router value that is bigger than or equal
 			 * to key */
+			tlog(6, "nonleaf searching router value for key %lli %lli",
+					key[0], key[1]);
 			off64_t n = cno->nrval;
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "rval #%i is %lli %lli", i, cno->rvals[0], cno->rvals[1]);
+				tlog(6, "rval %lli %lli", cno->rvals[i][0], cno->rvals[i][1]);
 				if(xz_greater(cno->rvals[i], key) ||
 						xz_equal(cno->rvals[i], key)) {
-					tlog(6, "rval matches key %lli %lli", key[0], key[1]);
+					tlog(6, "rval matches key");
 					n = i;
 					break;
 				}
 			}
-			tlog(6, "going to node at %lli", cno->children[n]);
+			tlog(6, "going to node at %llx", cno->children[n]);
+			if(cno->children[n] == 0) {
+				yamc_terminate(-132, "nullpointer as child.");
+			}
 			fseeko64(bpt->f, cno->children[n], SEEK_SET);
 		}
 	}
@@ -369,9 +403,12 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 		if(cno->is_leaf) {
 			/* search for match */
 			for(int i = 0; i < cno->nrval; i++) {
+				tlog(6, "leaf rval %lli, %lli", cno->rvals[i][0], cno->rvals[i][1]);
 				if(xz_equal(cno->rvals[i], key)) {
 					/*key exists, can't add.*/
 					arraylist_delete(&path);
+					tlog(6, "double add k %lli %lli, v %lli %lli",
+							key[0], key[1], cno->rvals[i][0], cno->rvals[i][1]);
 					return -1;
 				}
 				if(xz_greater(cno->rvals[i], key)) {
@@ -398,14 +435,24 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 			/* search for router value, that is bigger than or equal
 			 * to key */
 			off64_t n = cno->nrval;
+			tlog(6, "nonleaf, searching correct router value");
 			for(int i = 0; i < cno->nrval; i++) {
+				tlog(6, "rval %lli %lli low-child %lli high-child %lli",
+					cno->rvals[i][0], cno->rvals[i][1],
+					cno->children[i], cno->children[i+1]);
 				if(xz_greater(cno->rvals[i], key) ||
 						xz_equal(cno->rvals[i], key)) {
+					tlog(6, "it matched");
 					n = i;
 					break;
 				}
 			}
 
+			tlog(6, "going to node at %llx", cno->children[n]);
+			/* all router values smaller. last child is used. */
+			if(cno->children[n] == 0) {
+				yamc_terminate(-132, "nullpointer as child.");
+			}
 			fseeko64(bpt->f, cno->children[n], SEEK_SET);
 			arraylist_append(&path, &cno->children[n]);
 		}
