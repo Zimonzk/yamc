@@ -246,8 +246,11 @@ static void node_insert(struct beept *bpt, uint64_t rval[2], off64_t chld, int i
 static void bpt_place_and_shift_down(struct bpt_node *cno, 
 		uint64_t rval[2], off64_t chld, int i)
 {
+	uint64_t rval_local[2];
 	uint64_t tempr[2];
 	off64_t tempc;
+
+	memcpy(rval_local, rval, 2*8);
 
 	for(int j = i; j < cno->nrval; j++) {
 		/* backup current */
@@ -257,15 +260,15 @@ static void bpt_place_and_shift_down(struct bpt_node *cno,
 		tempc = cno->children[j+(cno->is_leaf ? 0 : 1)];
 
 		/* add new */
-		memcpy(cno->rvals[j], rval, 2*8);
+		memcpy(cno->rvals[j], rval_local, 2*8);
 		cno->children[j+(cno->is_leaf ? 0 : 1)] = chld;
 
 		/* make backup into "new" */
-		memcpy(rval, tempr, 2*8);
+		memcpy(rval_local, tempr, 2*8);
 		chld = tempc;
 	}
 	/* put "new" into new last place */
-	memcpy(cno->rvals[cno->nrval], rval, 2*8);
+	memcpy(cno->rvals[cno->nrval], rval_local, 2*8);
 	tlog(6, "wrote last rval of %lli %lli", cno->rvals[cno->nrval][0], cno->rvals[cno->nrval][1]);
 	cno->children[cno->nrval+(cno->is_leaf ? 0 : 1)] = chld;
 

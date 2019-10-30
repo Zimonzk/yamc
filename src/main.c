@@ -162,28 +162,32 @@ int main(int argc, char *argv[])
 		tlog(5, "bpt inited. took %li ms.", SDL_GetTicks() - testticks);
 		testticks = SDL_GetTicks();
 		uint64_t v = 0;
+		int count = 1;
 		tlog(5, "Beept init %i", t);
-		for(uint64_t ui = ITERR - 2; ui >= 0; ui -= 2) {
+		for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
 			testbeek[0] = ui;
-			for(uint64_t uiui = ITERR - 2; uiui >= 0; uiui -= 2) {
+			for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
 				testbeek[1] = uiui;
 				
-				tlog(6, "addcount %i", 1+(ui*ITERR/2 + uiui)/2);	
+				tlog(6, "addcount %i, adding %llu %llu", count++, testbeek[0], testbeek[1]);	
 				fflush(stdout);
 
 				t = bpt_add(&testbee, testbeek, ui ^ uiui);
 				if(t != 0) {
 					yamc_terminate(-665, "error adding");
 				}
+				tlog(6, "wft %llu %llu", testbeek[0], testbeek[1]);
 			}
 		}
 		tlog(5, "Bee insert done. took %li ms", SDL_GetTicks() - testticks);
 		testticks = SDL_GetTicks();
 
-		for(uint64_t ui = ITERR - 2; ui >= 0; ui -= 2) {
+		count = 1;
+
+		for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
 			testbeek[0] = ui;
-			for(uint64_t uiui = ITERR - 2; uiui >= 0; uiui -= 2) {
-				tlog(6, "rereading %lli", (uiui + ITERR*ui/2)/2);
+			for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
+				tlog(6, "rereading %i", count++);
 				testbeek[1] = uiui;
 				v = bpt_get(&testbee, testbeek);
 				if(v != (ui ^ uiui)) {
