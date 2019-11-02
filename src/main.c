@@ -94,7 +94,6 @@ int main(int argc, char *argv[])
 
 	Uint32 lastticks = 0, thisticks = 0, difftime = 0;
 	Uint32 fpsticks = 0, fpslastticks = 0;
-	uint32_t testticks = 0;
 	float fps = 0;
 	long frame_num = 0;
 	char fpsstr[64];
@@ -103,9 +102,6 @@ int main(int argc, char *argv[])
 	SDL_GLContext maincontext; /* Our opengl context handle */
 
 	unsigned int side_texi, top_texi;
-
-	struct beept testbee = {};
-	uint64_t testbeek[2] = {(uint64_t) 11L, (uint64_t) 777L};
 
 	tset_verbosity(5);
 	tlog(5, "Verbosity set to %i.", global_verbosity);
@@ -155,66 +151,10 @@ int main(int argc, char *argv[])
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
 
-	testticks = SDL_GetTicks();
-	{
-#define ITERR 2000LL
-		int t = beept_init(&testbee, "test.beept");
-		tlog(5, "bpt inited. took %li ms.", SDL_GetTicks() - testticks);
-		testticks = SDL_GetTicks();
-		uint64_t v = 0;
-		int count = 1;
-		tlog(5, "Beept init %i", t);
-		for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
-			testbeek[0] = ui;
-			for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
-				testbeek[1] = uiui;
-				
-				tlog(6, "addcount %i, adding %llu %llu", count++, testbeek[0], testbeek[1]);	
-				fflush(stdout);
-
-				t = bpt_add(&testbee, testbeek, ui ^ uiui);
-				if(t != 0) {
-					yamc_terminate(-665, "error adding");
-				}
-				tlog(6, "wft %llu %llu", testbeek[0], testbeek[1]);
-			}
-		}
-		tlog(5, "Bee insert done. took %li ms", SDL_GetTicks() - testticks);
-		testticks = SDL_GetTicks();
-
-		count = 1;
-
-		for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
-			testbeek[0] = ui;
-			for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
-				tlog(6, "rereading %i", count++);
-				testbeek[1] = uiui;
-				v = bpt_get(&testbee, testbeek);
-				if(v != (ui ^ uiui)) {
-					terror("v %lli", v);
-					yamc_terminate(-664, "error reading");
-				}
-				testbeek[1] = uiui + 1;
-				v = bpt_get(&testbee, testbeek);
-				if(v != 0) {
-					yamc_terminate(-663, "unallowed z key");	
-				}
-				testbeek[0] = ui + 1;
-				v = bpt_get(&testbee, testbeek);
-				if(v != 0) {
-					yamc_terminate(-663, "unallowed xz key");	
-				}
-				testbeek[1] = uiui;
-				v = bpt_get(&testbee, testbeek);
-				if(v != 0) {
-					yamc_terminate(-663, "unallowed x key");	
-				}
-				testbeek[0] = ui;
-			}
-		}
-		tlog(5, "Bee check done. took %li ms", SDL_GetTicks() - testticks);
-	}
-	beept_close(&testbee);
+#define TESTBEES
+#ifdef TESTBEES
+	beeplustest();
+#endif
 
 	init_controls();
 	render_init();

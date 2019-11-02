@@ -13,6 +13,8 @@
 	exit(ERROR); \
 }
 
+void xsrand64_seed(uint64_t);
+uint64_t xsrand64(void);
 
 
 #endif

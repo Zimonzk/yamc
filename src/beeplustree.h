@@ -44,4 +44,7 @@ int 		bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value);
 /* yet to be implemented */
 int		bpt_del(struct beept *bpt, uint64_t key[2]);
 
+
+void beeplustest(void);
+
 #endif

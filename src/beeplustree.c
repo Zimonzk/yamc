@@ -8,6 +8,8 @@
 #include "zimonzk/lists.h"
 #include "toolbox.h"
 
+#include <SDL2/SDL.h>
+
 
 static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		uint64_t rval[2], off64_t chld,
@@ -64,17 +66,16 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		uint64_t rval[2], off64_t chld,
 		arraylist *path, int i, uint8_t is_leaf)
 {
-	/* allocate new node */
 	off64_t nodeo;
 	struct bpt_node newnode = {}, parent = {};
-	/* newnode.children[15] = 1337LL; */
 	uint64_t newrval[2];
 	newnode.is_leaf = is_leaf;
 
+	/* allocate new node */
 	fseeko64(bpt->f, 0, SEEK_END);
 	nodeo = ftello64(bpt->f);
 
-	if(i > 16) {
+	if(i > 15) {
 		/* key will be placed in the new node */
 		newnode.nrval = 15;
 	} else {
@@ -84,19 +85,36 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 
 	/* move second half of keys and values */
 	memcpy(newnode.rvals, cno->rvals[31-newnode.nrval], 2*8*newnode.nrval);
-	tlog(6, "first router value will be %lli %lli", newnode.rvals[0][0], newnode.rvals[0][1]);
+	tlog(6, "first rval in the new node will be %llu %llu", newnode.rvals[0][0], newnode.rvals[0][1]);
 	memcpy(newnode.children, &cno->children[31-newnode.nrval], 8*(newnode.nrval+1));
 	cno->nrval = 31 - newnode.nrval;
 
+	tlog(6, "placing the new rval+chid into node.");
 	/* place key and value and shift down */
-	if(i > 16) {
-		tlog(6, "placing new rval %lli %lli and child %lli in new node at i %i",
-			       rval[0], rval[1], chld, i-(31-newnode.nrval));	
+	if(i > 15) {
+		/* place in new node */
+		tlog(6, "placing new rval %llu %llu and child %llu in new node at i %i",
+				rval[0], rval[1], chld, i-(31-newnode.nrval));	
 		bpt_place_and_shift_down(&newnode, rval, chld, i-(31-newnode.nrval));
+	} else if((i == 15) && (is_leaf == 0)) {
+		/* the new rval and new node go in different nodes */
+		memcpy(cno->rvals[15], rval, 2*8);
+		cno->nrval++;
+
+		newnode.children[0] = chld;
 	} else {
+		/* place in old node */
+		tlog(6, "placing in the old node at i %i", i);
 		bpt_place_and_shift_down(cno, rval, chld, i);
 	}
-
+	tlog(6, "the old node now contains the router values: ");
+	for(int dbg = 0; dbg < cno->nrval; dbg++) {
+		tlog(6, "%llu %llu", cno->rvals[dbg][0], cno->rvals[dbg][1]);
+	}
+	tlog(6, "the new node now contains the router values: ");
+	for(int dbg = 0; dbg < newnode.nrval; dbg++) {
+		tlog(6, "%llu %llu", newnode.rvals[dbg][0], newnode.rvals[dbg][1]);
+	}
 
 	/* if we are in a non-leaf the last router value becomes useless in the
 	 * current node, since the last child must not have a router value.
@@ -105,7 +123,7 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 	 * which of course should be linked to by its old highest router value
 	 * which again is the one we have to move anyways. */
 	memcpy(newrval, cno->rvals[cno->nrval-1], 2*8);
-	tlog(6, "newrval is %lli %lli", newrval[0], newrval[1]);
+	tlog(6, "newrval is %llu %llu", newrval[0], newrval[1]);
 	if(newnode.is_leaf == 0)
 	{
 		cno->nrval--;
@@ -161,8 +179,8 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 		arraylist_del_element(path, path->used_units-1);
 
 		if(path->used_units == 0) {
-		/* our parent is the root node (which is not in path so
-		 * we use its known address: 0)*/
+			/* our parent is the root node (which is not in path so
+			 * we use its known address: 0)*/
 			tlog(6, "parent is root");
 			poff = 0;
 		} else {
@@ -198,10 +216,10 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 				}
 			}
 		}
-		/* TODO clean this and simmilat loop constructs up
-		 * so that the body ist not repeatet bekow the loop itself.
+		/* TODO clean this and simmilar loop constructs up
+		 * so that the body ist not repeated below the loop itself.
 		 * somehow put that case also into the loop. */
-		tlog(6, "newrval now is %lli %lli", newrval[0], newrval[1]);
+		tlog(6, "newrval now is %llu %llu", newrval[0], newrval[1]);
 		/* no router values yet, or all values were smaller */
 		if(parent.nrval == 31) {
 			/* node full */
@@ -211,10 +229,10 @@ static void bpt_split_node(struct beept *bpt, struct bpt_node *cno,
 					newrval, nodeo, path, parent.nrval, 0);
 
 		} else {
-		bpt_place_and_shift_down(&parent, newrval, nodeo, parent.nrval);
-		/* in this case, the node also needs
-		 * to be written back */
-		bpt_node_to_disk(bpt, &parent, poff);
+			bpt_place_and_shift_down(&parent, newrval, nodeo, parent.nrval);
+			/* in this case, the node also needs
+			 * to be written back */
+			bpt_node_to_disk(bpt, &parent, poff);
 		}
 	}
 
@@ -269,7 +287,7 @@ static void bpt_place_and_shift_down(struct bpt_node *cno,
 	}
 	/* put "new" into new last place */
 	memcpy(cno->rvals[cno->nrval], rval_local, 2*8);
-	tlog(6, "wrote last rval of %lli %lli", cno->rvals[cno->nrval][0], cno->rvals[cno->nrval][1]);
+	tlog(6, "wrote last rval of %llu %llu", cno->rvals[cno->nrval][0], cno->rvals[cno->nrval][1]);
 	cno->children[cno->nrval+(cno->is_leaf ? 0 : 1)] = chld;
 
 	/* update used values count */
@@ -283,7 +301,7 @@ static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
 	fseeko64(bpt->f, addr, SEEK_SET);
 
 	data[0] = cno->is_leaf;
-	tlog(6, "is leaf? %i", cno->is_leaf);
+	//tlog(6, "is leaf? %i", cno->is_leaf);
 
 	cno->nrval = htole16(cno->nrval);
 	memcpy(data+1, &cno->nrval, 2);
@@ -299,7 +317,7 @@ static void bpt_node_to_disk(struct beept *bpt, struct bpt_node *cno,
 	}
 	memcpy(data+3+2*31*8, &cno->children, 32*8);
 
-	tlog(6, "write at %llx", addr);
+	//tlog(6, "write at %llx", addr);
 	if(fwrite(data, sizeof(data), 1, bpt->f) != 1) {
 		yamc_terminate(-124, "Could not write to beeplustree.");
 	}
@@ -325,7 +343,7 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno)
 		cno->rvals[i][0] = le64toh(cno->rvals[i][0]);
 		cno->rvals[i][1] = le64toh(cno->rvals[i][1]);
 	}
-	tlog(6, "first rval read %lli %lli", cno->rvals[0][0], cno->rvals[0][1]);
+	//tlog(6, "first rval read %llu %llu", cno->rvals[0][0], cno->rvals[0][1]);
 
 	memcpy(&cno->children, data+3+2*31*8, 32*8);
 	for(int i = 0; i < 32; i++) {
@@ -345,9 +363,9 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 
 		if(cno->is_leaf) {
 			/* search for match */
-			tlog(6, "leaf searching key for %lli %lli", key[0], key[1]);
+			tlog(6, "leaf searching key for %llu %llu", key[0], key[1]);
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "rval %lli %lli",
+				tlog(6, "rval %llu %llu",
 						cno->rvals[i][0],
 						cno->rvals[i][1]);
 				if(xz_equal(cno->rvals[i], key)) {
@@ -361,17 +379,17 @@ uint64_t bpt_get(struct beept *bpt, uint64_t key[2])
 				}
 			}
 
-			tlog(6, "key not found");
+			tlog(5, "key not found");
 
 			return 0; /*key nonexistent*/
 		} else {
 			/* search for router value that is bigger than or equal
 			 * to key */
-			tlog(6, "nonleaf searching router value for key %lli %lli",
+			tlog(6, "nonleaf searching router value for key %llu %llu",
 					key[0], key[1]);
 			off64_t n = cno->nrval;
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "rval %lli %lli", cno->rvals[i][0], cno->rvals[i][1]);
+				tlog(6, "rval %llu %llu", cno->rvals[i][0], cno->rvals[i][1]);
 				if(xz_greater(cno->rvals[i], key) ||
 						xz_equal(cno->rvals[i], key)) {
 					tlog(6, "rval matches key");
@@ -406,11 +424,11 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 		if(cno->is_leaf) {
 			/* search for match */
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "leaf rval %lli, %lli", cno->rvals[i][0], cno->rvals[i][1]);
+				tlog(6, "leaf rval %llu, %llu", cno->rvals[i][0], cno->rvals[i][1]);
 				if(xz_equal(cno->rvals[i], key)) {
 					/*key exists, can't add.*/
 					arraylist_delete(&path);
-					tlog(6, "double add k %lli %lli, v %lli %lli",
+					tlog(6, "double add k %llu %llu, v %llu %llu",
 							key[0], key[1], cno->rvals[i][0], cno->rvals[i][1]);
 					return -1;
 				}
@@ -440,9 +458,9 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 			off64_t n = cno->nrval;
 			tlog(6, "nonleaf, searching correct router value");
 			for(int i = 0; i < cno->nrval; i++) {
-				tlog(6, "rval %lli %lli low-child %lli high-child %lli",
-					cno->rvals[i][0], cno->rvals[i][1],
-					cno->children[i], cno->children[i+1]);
+				tlog(6, "rval %llu %llu low-child %llu high-child %llu",
+						cno->rvals[i][0], cno->rvals[i][1],
+						cno->children[i], cno->children[i+1]);
 				if(xz_greater(cno->rvals[i], key) ||
 						xz_equal(cno->rvals[i], key)) {
 					tlog(6, "it matched");
@@ -465,3 +483,152 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 	return -2;
 }
 
+/*void beeplustest(void)
+{
+#define ITERR 32LL
+#define BEETEST_RANDOM
+	uint32_t testticks = SDL_GetTicks();
+	struct beept testbee = {};
+	int t = beept_init(&testbee, "test.beept");
+	uint64_t testbeek[2] = {(uint64_t) 11L, (uint64_t) 777L};
+	uint64_t v = 0;
+	int count = 1;
+	uint64_t value;
+	
+	tlog(5, "bpt inited. took %li ms.", SDL_GetTicks() - testticks);
+	tlog(5, "Beept init %i", t);
+	
+#ifdef BEETEST_RANDOM
+	xsrand64_seed(0x5fe705974ddbe33fLL);
+#endif
+	
+	for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
+#ifndef BEETEST_RANDOM
+		testbeek[0] = ui;
+#endif
+		for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
+#ifdef BEETEST_RANDOM
+			testbeek[0] = xsrand64();
+			testbeek[1] = xsrand64();
+			value = xsrand64();
+#else
+			testbeek[1] = uiui;
+			value = ui ^ uiui;
+#endif
+
+			tlog(5, "addcount %i, adding k %llu %llu, v %llu", count++, testbeek[0], testbeek[1], value);
+			if(count == 236) {
+				tset_verbosity(10);
+			}	
+			fflush(stdout);
+
+			t = bpt_add(&testbee, testbeek, value);
+			tset_verbosity(5);
+			if(t != 0) {
+				yamc_terminate(-665, "error adding");
+			}
+			tlog(6, "wft %llu %llu", testbeek[0], testbeek[1]);
+		}
+	}
+	tlog(5, "Bee insert done. took %li ms", SDL_GetTicks() - testticks);
+	testticks = SDL_GetTicks();
+
+	count = 1;
+#ifdef BEETEST_RANDOM
+	xsrand64_seed(0x5fe705974ddbe33fLL);
+#endif
+
+	for(uint64_t ui = ITERR; ui > 0; ui -= 2) {
+#ifndef BEETEST_RANDOM
+		testbeek[0] = ui;
+#endif
+		for(uint64_t uiui = ITERR; uiui > 0; uiui -= 2) {
+#ifdef BEETEST_RANDOM
+			testbeek[0] = xsrand64();
+			testbeek[1] = xsrand64();
+			value = xsrand64();
+#else
+			testbeek[1] = uiui;
+			value = ui ^ uiui
+#endif
+			tlog(5, "rereading %i k %llu %llu, v %llu", count++, testbeek[0], testbeek[1], value);
+
+			v = bpt_get(&testbee, testbeek);
+			if(v != value) {
+				terror("v %llu", v);
+				yamc_terminate(-664, "error reading");
+			}
+#ifndef BEETEST_RANDOM
+			testbeek[1] = uiui + 1;
+			v = bpt_get(&testbee, testbeek);
+			if(v != 0) {
+				yamc_terminate(-663, "unallowed z key");	
+			}
+			testbeek[0] = ui + 1;
+			v = bpt_get(&testbee, testbeek);
+			if(v != 0) {
+				yamc_terminate(-663, "unallowed xz key");	
+			}
+			testbeek[1] = uiui;
+			v = bpt_get(&testbee, testbeek);
+			if(v != 0) {
+				yamc_terminate(-663, "unallowed x key");	
+			}
+			testbeek[0] = ui;
+#endif
+		}
+	}
+	tlog(5, "Bee check done. took %li ms", SDL_GetTicks() - testticks);
+
+	beept_close(&testbee);
+}*/
+
+void beeplustest(void)
+{
+#define TEST_ITERATIONS 10000000
+	struct beept testbee = {};
+	int t = beept_init(&testbee, "test.beept");
+
+	uint64_t testkey[2];
+	uint64_t testvalue;
+	uint64_t retvalue;
+
+	xsrand64_seed(0x5fe705974ddbe33fLL);
+
+	tlog(5, "--- writing ---");
+
+	for(int i = 0; i < TEST_ITERATIONS; i++) {
+		testkey[0] = xsrand64();
+		testkey[1] = xsrand64();
+		testvalue = xsrand64();
+
+		tlog(6, "%i k %llu %llu v %llu", i, testkey[0], testkey[1], testvalue);
+
+		t = bpt_add(&testbee, testkey, testvalue);
+		if(t != 0) {
+			yamc_terminate(-665, "error adding");
+		}
+	}
+
+	xsrand64_seed(0x5fe705974ddbe33fLL);
+
+	tlog(5, "--- rereading ---");
+
+	for(int i = 0; i < TEST_ITERATIONS; i++) {
+		testkey[0] = xsrand64();
+		testkey[1] = xsrand64();
+		testvalue = xsrand64();
+
+		tlog(6, "%i k %llu %llu v %llu", i, testkey[0], testkey[1], testvalue);
+
+		retvalue = bpt_get(&testbee, testkey);
+
+		tset_verbosity(5);
+
+		if(retvalue != testvalue) {
+			terror("got v %llu", retvalue);
+			yamc_terminate(-664, "error reading");
+		}
+
+	}
+}
