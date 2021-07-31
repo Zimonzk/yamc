@@ -119,8 +119,7 @@ static float model[4][4] = {};
 static float view[4][4] = {};
 static float projection[4][4] = {};
 
-
-extern chunk* neig[4];
+chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
 
 struct mesh
 {

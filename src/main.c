@@ -21,6 +21,7 @@
 #define PROGRAM_NAME "YAMC"
 
 #include "zimonzk/logger.h"
+#include "plogger.h"
 #include "dndndefs.h"
 #include "shader.h"
 #include "matr.h"
@@ -53,8 +54,6 @@ void sdldie(const char *msg)
 	exit(1);
 }
 
-
-chunk* neig[4] = {(chunk*)0, (chunk*)0, (chunk*)0, (chunk*)0};
 
 struct event_index_card *ic_reg;
 
@@ -150,11 +149,6 @@ int main(int argc, char *argv[])
 	top_texi = load_block_texture("textures/blocks/top.png");
 	/* create a block */
 	register_block("soil", "Dirt", 1, (const unsigned int[6]) {side_texi, side_texi, side_texi, side_texi, top_texi, top_texi});
-
-#define TESTBEES
-#ifdef TESTBEES
-	beeplustest();
-#endif
 
 	init_controls();
 	render_init();

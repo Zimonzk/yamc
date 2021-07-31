@@ -328,8 +328,7 @@ static void bpt_node_from_disk_here(struct beept *bpt, struct bpt_node *cno)
 	uint8_t data[755];
 	/* yet to be implemented */
 	if(fread(data, sizeof(data), 1, bpt->f) != 1) {
-		yamc_terminate(-1,
-				"Could not read a node from a beeplustree.");
+		yamc_terminate(-1, "Could not read a node from a beeplustree.");
 	}
 
 	cno->is_leaf = data[0];
@@ -582,53 +581,3 @@ int bpt_add(struct beept *bpt, uint64_t key[2], uint64_t value)
 
 	beept_close(&testbee);
 }*/
-
-void beeplustest(void)
-{
-#define TEST_ITERATIONS 10000000
-	struct beept testbee = {};
-	int t = beept_init(&testbee, "test.beept");
-
-	uint64_t testkey[2];
-	uint64_t testvalue;
-	uint64_t retvalue;
-
-	xsrand64_seed(0x5fe705974ddbe33fLL);
-
-	tlog(5, "--- writing ---");
-
-	for(int i = 0; i < TEST_ITERATIONS; i++) {
-		testkey[0] = xsrand64();
-		testkey[1] = xsrand64();
-		testvalue = xsrand64();
-
-		tlog(6, "%i k %llu %llu v %llu", i, testkey[0], testkey[1], testvalue);
-
-		t = bpt_add(&testbee, testkey, testvalue);
-		if(t != 0) {
-			yamc_terminate(-665, "error adding");
-		}
-	}
-
-	xsrand64_seed(0x5fe705974ddbe33fLL);
-
-	tlog(5, "--- rereading ---");
-
-	for(int i = 0; i < TEST_ITERATIONS; i++) {
-		testkey[0] = xsrand64();
-		testkey[1] = xsrand64();
-		testvalue = xsrand64();
-
-		tlog(6, "%i k %llu %llu v %llu", i, testkey[0], testkey[1], testvalue);
-
-		retvalue = bpt_get(&testbee, testkey);
-
-		tset_verbosity(5);
-
-		if(retvalue != testvalue) {
-			terror("got v %llu", retvalue);
-			yamc_terminate(-664, "error reading");
-		}
-
-	}
-}

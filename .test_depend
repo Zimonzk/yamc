@@ -1,0 +1,7 @@
+test_obj/test_beetree.o: test_src/test_beetree.c test_src/test_beetree.h \
+ test_src/../src/beeplustree.h test_src/../src/plogger.h \
+ include/zimonzk/logger.h include/zimonzk/lists.h \
+ test_src/../src/toolbox.h test_src/../src/plogger.h
+test_obj/testmain.o: test_src/testmain.c test_src/../src/plogger.h \
+ include/zimonzk/logger.h test_src/test_beetree.h \
+ test_src/../src/beeplustree.h
